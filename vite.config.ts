@@ -22,6 +22,15 @@ export default defineConfig({
       "/auth/login": {
         target: "http://localhost:8080",
       },
+      "/auth/internal": {
+        target: "http://localhost:8080",
+      },
+      "/auth/exchange": {
+        target: "http://localhost:8080",
+      },
+      "/auth/refresh": {
+        target: "http://localhost:8080",
+      },
       "/login": {
         target: "http://localhost:8080",
       },

@@ -1,15 +1,9 @@
 import type { RefObject } from "react"
 import type { PanelImperativeHandle } from "react-resizable-panels"
-import { Check, ChevronDown, ClipboardCopy, Loader2, LogIn, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Settings, Shield, ShieldCheck, ShieldOff, Sparkles } from "lucide-react"
+import { Check, ClipboardCopy, Loader2, LogIn, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Settings, Shield, ShieldCheck, ShieldOff, Sparkles } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -20,6 +14,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ProviderIcon, formatProviderName } from "@/components/ui/provider-icon"
 import { useAuth } from "@/contexts/auth-context"
+import { LoginDialog } from "@/components/auth/LoginDialog"
 import { authFetch } from "@/lib/auth-fetch"
 import type { Repo } from "@/types"
 import { RepoSelector } from "./RepoSelector"
@@ -47,7 +42,8 @@ export function Header({
   const [collapsed, setCollapsed] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [totpDialogOpen, setTotpDialogOpen] = useState(false)
-  const { user, permissions, providers, login, logout } = useAuth()
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false)
+  const { user, permissions, logout } = useAuth()
 
   function toggleSidebar() {
     const panel = sidebarRef.current
@@ -165,31 +161,9 @@ export function Header({
               <LogOut className="size-4" />
             </Button>
           </>
-        ) : providers.length > 1 ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <LogIn className="size-4 mr-2" />
-                Sign in
-                <ChevronDown className="size-3 ml-1 opacity-60" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[180px]">
-              {providers.map((p) => (
-                <DropdownMenuItem key={p.name} onClick={() => login(p.name)} className="gap-2.5 py-2">
-                  <ProviderIcon provider={p.name} className="size-4 shrink-0" />
-                  <span>{p.display_name}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => login(providers[0]?.name)}>
-            {providers[0] ? (
-              <ProviderIcon provider={providers[0].name} className="size-4 mr-2" />
-            ) : (
-              <LogIn className="size-4 mr-2" />
-            )}
+          <Button variant="outline" size="sm" onClick={() => setLoginDialogOpen(true)}>
+            <LogIn className="size-4 mr-2" />
             Sign in
           </Button>
         )}
@@ -200,6 +174,9 @@ export function Header({
     )}
     {totpDialogOpen && (
       <TotpDialog open={totpDialogOpen} onOpenChange={setTotpDialogOpen} />
+    )}
+    {loginDialogOpen && (
+      <LoginDialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen} />
     )}
   </>
   )

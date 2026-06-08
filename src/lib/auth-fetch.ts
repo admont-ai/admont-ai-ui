@@ -1,6 +1,7 @@
 import { toast } from "sonner"
 
 const TOKEN_KEY = "auth_token"
+const REFRESH_KEY = "refresh_token"
 
 export function getAuthToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
@@ -10,8 +11,17 @@ export function setAuthToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token)
 }
 
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_KEY)
+}
+
+export function setRefreshToken(token: string): void {
+  localStorage.setItem(REFRESH_KEY, token)
+}
+
 export function clearAuthToken(): void {
   localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(REFRESH_KEY)
 }
 
 // Deduplicate "backend unreachable" toasts — show at most one per 5 seconds

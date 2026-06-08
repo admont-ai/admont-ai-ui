@@ -8,7 +8,7 @@ import {
   useState,
 } from "react"
 
-import { authFetch, clearAuthToken, getAuthToken, setAuthToken } from "@/lib/auth-fetch"
+import { authFetch, clearAuthToken, getAuthToken, getRefreshToken, setAuthToken, setRefreshToken } from "@/lib/auth-fetch"
 import { providerFromIssuer } from "@/components/ui/provider-icon"
 
 interface User {
@@ -30,13 +30,22 @@ export interface AuthProvider {
   display_name: string
 }
 
+export interface InternalLoginResult {
+  totpRequired: boolean
+  pendingToken?: string
+}
+
 interface AuthContextValue {
   user: User | null
   permissions: Permissions
   isAuthenticated: boolean
   isLoading: boolean
   providers: AuthProvider[]
+  signupOpen: boolean
   login: (provider?: string) => void
+  loginInternal: (email: string, password: string) => Promise<InternalLoginResult>
+  verifyTotp: (pendingToken: string, code: string) => Promise<void>
+  signup: (email: string, password: string, firstName: string, lastName: string) => Promise<void>
   logout: () => void
 }
 
@@ -141,8 +150,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [permissions, setPermissions] = useState<Permissions>({ admin: false, repo_admin: false, ai_user: false, roles: [] })
   const [isLoading, setIsLoading] = useState(true)
   const [providers, setProviders] = useState<AuthProvider[]>([])
+  const [signupOpen, setSignupOpen] = useState(false)
 
-  // Fetch available auth providers
+  // Fetch available external auth providers and native-signup availability.
   useEffect(() => {
     authFetch("/auth/providers")
       .then((res) => (res.ok ? res.json() : []))
@@ -156,6 +166,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ))
       })
       .catch(() => {})
+
+    authFetch("/auth/internal/signup-status")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { signup_open?: boolean } | null) => {
+        setSignupOpen(Boolean(data?.signup_open))
+      })
+      .catch(() => {})
   }, [])
 
   const logout = useCallback(() => {
@@ -163,34 +180,138 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.reload()
   }, [])
 
-  // Schedule auto-logout 1 min before token expires
-  const scheduleExpiry = useCallback(
-    (token: string) => {
-      const expMs = getExpMs(token)
-      if (!expMs) return
-      const delay = expMs - Date.now() - 60_000
-      if (delay <= 0) {
+  // Holds the latest refresh routine so scheduleExpiry's timer can call it
+  // without creating a dependency cycle.
+  const refreshRef = useRef<() => void>(() => {})
+
+  // Refresh the access token ~1 min before expiry; logout if it fails.
+  const scheduleExpiry = useCallback((token: string) => {
+    const expMs = getExpMs(token)
+    if (!expMs) return
+    const delay = expMs - Date.now() - 60_000
+    if (delay <= 0) {
+      refreshRef.current()
+      return
+    }
+    const timer = setTimeout(() => refreshRef.current(), delay)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const applySession = useCallback(
+    (token: string, refreshToken?: string) => {
+      setAuthToken(token)
+      if (refreshToken) setRefreshToken(refreshToken)
+      restoreSession(token, setUser, setPermissions, scheduleExpiry)
+    },
+    [scheduleExpiry],
+  )
+
+  const tryRefresh = useCallback(async () => {
+    const rt = getRefreshToken()
+    if (!rt) {
+      logout()
+      return
+    }
+    try {
+      const res = await fetch("/auth/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: rt }),
+      })
+      if (!res.ok) {
         logout()
         return
       }
-      const timer = setTimeout(logout, delay)
-      return () => clearTimeout(timer)
-    },
-    [logout],
-  )
+      const data = (await res.json()) as { token?: string }
+      if (data.token) {
+        setAuthToken(data.token)
+        scheduleExpiry(data.token)
+      } else {
+        logout()
+      }
+    } catch {
+      logout()
+    }
+  }, [logout, scheduleExpiry])
 
+  useEffect(() => {
+    refreshRef.current = () => void tryRefresh()
+  }, [tryRefresh])
+
+  // External IdP login (OAuth redirect). Kept for when external providers exist.
   const login = useCallback(async (provider?: string) => {
     const redirectUri = `${window.location.origin}${AUTH_CALLBACK_PATH}`
     let url = `/auth/login?redirect_uri=${encodeURIComponent(redirectUri)}`
     if (provider) {
       url += `&provider=${encodeURIComponent(provider)}`
     }
-    console.log("[auth] login request:", url)
     const res = await fetch(url)
-    const data = await res.json() as { auth_url: string }
-    console.log("[auth] login response:", data)
+    if (!res.ok) throw new Error("login is not available")
+    const data = (await res.json()) as { auth_url: string }
     window.location.href = data.auth_url
   }, [])
+
+  // Native internal login: returns {totpRequired} or applies the session.
+  const loginInternal = useCallback(
+    async (email: string, password: string): Promise<InternalLoginResult> => {
+      const res = await fetch("/auth/internal/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string
+        totp_required?: boolean
+        pending_token?: string
+        token?: string
+        refresh_token?: string
+      }
+      if (!res.ok) throw new Error(data.error ?? "Login failed")
+      if (data.totp_required) {
+        return { totpRequired: true, pendingToken: data.pending_token }
+      }
+      applySession(data.token!, data.refresh_token)
+      return { totpRequired: false }
+    },
+    [applySession],
+  )
+
+  const verifyTotp = useCallback(
+    async (pendingToken: string, code: string) => {
+      const res = await fetch("/auth/internal/totp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pending_token: pendingToken, code }),
+      })
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string
+        token?: string
+        refresh_token?: string
+      }
+      if (!res.ok) throw new Error(data.error ?? "Verification failed")
+      applySession(data.token!, data.refresh_token)
+    },
+    [applySession],
+  )
+
+  const signup = useCallback(
+    async (email: string, password: string, firstName: string, lastName: string) => {
+      const res = await fetch("/auth/internal/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, first_name: firstName, last_name: lastName }),
+      })
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string
+        token?: string
+        refresh_token?: string
+      }
+      if (!res.ok) throw new Error(data.error ?? "Signup failed")
+      setSignupOpen(false)
+      applySession(data.token!, data.refresh_token)
+    },
+    [applySession],
+  )
 
   // Handle OAuth callback token or restore existing session.
   // Uses initialUrl ref because child effects (AppLayout URL-sync)
@@ -201,13 +322,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (pathname === AUTH_CALLBACK_PATH) {
       const params = new URLSearchParams(search)
       const token = params.get("token")
+      const code = params.get("code")
 
       // Clean URL to prevent double-processing in React Strict Mode
       window.history.replaceState({}, "", "/")
 
       if (token) {
-        setAuthToken(token)
-        restoreSession(token, setUser, setPermissions, scheduleExpiry)
+        applySession(token, params.get("refresh_token") ?? undefined)
+        setIsLoading(false)
+        return
+      }
+      if (code) {
+        // External IdP one-time code → exchange for tokens.
+        fetch("/auth/exchange", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d: { token?: string; refresh_token?: string } | null) => {
+            if (d?.token) applySession(d.token, d.refresh_token)
+          })
+          .catch(() => {})
+          .finally(() => setIsLoading(false))
+        return
       }
       setIsLoading(false)
       return
@@ -224,7 +362,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setIsLoading(false)
-  }, [scheduleExpiry])
+  }, [scheduleExpiry, applySession])
 
   // Listen for 401 events from authFetch
   useEffect(() => {
@@ -240,10 +378,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: user !== null,
       isLoading,
       providers,
+      signupOpen,
       login,
+      loginInternal,
+      verifyTotp,
+      signup,
       logout,
     }),
-    [user, permissions, isLoading, providers, login, logout],
+    [user, permissions, isLoading, providers, signupOpen, login, loginInternal, verifyTotp, signup, logout],
   )
 
   return (

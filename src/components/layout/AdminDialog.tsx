@@ -539,6 +539,7 @@ interface ExternalUser {
   last_name?: string
   roles: string[]
   super_admin?: boolean
+  status?: string
   created_at?: string
   updated_at?: string
 }
@@ -554,15 +555,12 @@ function ExternalUsersTab() {
   const [editSuperAdmin, setEditSuperAdmin] = useState(false)
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
+  const [approvingKey, setApprovingKey] = useState<string | null>(null)
 
-  // Add form
+  // Add form — provider + email only; profile comes from the IdP on first login.
   const [showAddForm, setShowAddForm] = useState(false)
   const [newProvider, setNewProvider] = useState("")
   const [newEmail, setNewEmail] = useState("")
-  const [newFirstname, setNewFirstname] = useState("")
-  const [newLastname, setNewLastname] = useState("")
-  const [newRoles, setNewRoles] = useState<string[]>([])
-  const [newSuperAdmin, setNewSuperAdmin] = useState(false)
   const [adding, setAdding] = useState(false)
 
   const userKey = (u: ExternalUser) => `${u.provider}:${u.email}`
@@ -599,24 +597,15 @@ function ExternalUsersTab() {
     if (!provider || !email) return
     setAdding(true)
     try {
-      const body: Record<string, unknown> = { provider, email }
-      if (newFirstname.trim()) body.first_name = newFirstname.trim()
-      if (newLastname.trim()) body.last_name = newLastname.trim()
-      if (newRoles.length > 0) body.roles = newRoles
-      body.super_admin = newSuperAdmin
       const res = await authFetch("/admin/users/external", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ provider, email }),
       })
       if (res.ok) {
-        toast.success(`External user "${email}" created`)
+        toast.success(`External user "${email}" authorized`)
         setNewProvider("")
         setNewEmail("")
-        setNewFirstname("")
-        setNewLastname("")
-        setNewRoles([])
-        setNewSuperAdmin(false)
         setShowAddForm(false)
         await fetchData()
       }
@@ -624,6 +613,24 @@ function ExternalUsersTab() {
       // toasted
     } finally {
       setAdding(false)
+    }
+  }
+
+  async function handleApproveUser(user: ExternalUser) {
+    const key = userKey(user)
+    setApprovingKey(key)
+    try {
+      const res = await authFetch(`/admin/users/external/${encodeURIComponent(user.provider)}/${encodeURIComponent(user.email)}/approve`, {
+        method: "POST",
+      })
+      if (res.ok) {
+        toast.success(`Approved "${user.email}"`)
+        await fetchData()
+      }
+    } catch {
+      // toasted
+    } finally {
+      setApprovingKey(null)
     }
   }
 
@@ -695,7 +702,10 @@ function ExternalUsersTab() {
         </Button>
       ) : (
         <div className="border rounded-md p-4 space-y-3">
-          <h4 className="text-sm font-medium">Add External User</h4>
+          <h4 className="text-sm font-medium">Authorize External User</h4>
+          <p className="text-xs text-muted-foreground">
+            Enter the provider and email. The name is filled from the identity provider on first login; assign roles afterward by editing the user.
+          </p>
           <div className="flex gap-2">
             <Select value={newProvider} onValueChange={setNewProvider}>
               <SelectTrigger className="w-48 shrink-0">
@@ -720,23 +730,6 @@ function ExternalUsersTab() {
               className={inputClass + " flex-1"}
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="text"
-              value={newFirstname}
-              onChange={(e) => setNewFirstname(e.target.value)}
-              placeholder="First Name"
-              className={inputClass}
-            />
-            <input
-              type="text"
-              value={newLastname}
-              onChange={(e) => setNewLastname(e.target.value)}
-              placeholder="Last Name"
-              className={inputClass}
-            />
-          </div>
-          <RoleCheckboxes roles={newRoles} onChange={setNewRoles} superAdmin={newSuperAdmin} onSuperAdminChange={setNewSuperAdmin} />
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -746,7 +739,7 @@ function ExternalUsersTab() {
               {adding && <Loader2 className="size-4 animate-spin" />}
               Add User
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { setShowAddForm(false); setNewProvider(""); setNewEmail(""); setNewFirstname(""); setNewLastname(""); setNewRoles([]); setNewSuperAdmin(false) }}>
+            <Button variant="outline" size="sm" onClick={() => { setShowAddForm(false); setNewProvider(""); setNewEmail("") }}>
               Cancel
             </Button>
           </div>
@@ -793,6 +786,7 @@ function ExternalUsersTab() {
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Email</th>
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">First Name</th>
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Last Name</th>
+              <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Status</th>
               <th className="px-3 py-1.5 text-center font-medium text-muted-foreground">Super Admin</th>
               {ROLES.map((r) => (
                 <th key={r.value} className="px-3 py-1.5 text-center font-medium text-muted-foreground">{r.label}</th>
@@ -804,7 +798,7 @@ function ExternalUsersTab() {
           <tbody className="divide-y">
             {users.length === 0 ? (
               <tr>
-                <td colSpan={8 + ROLES.length} className="px-3 py-2 text-muted-foreground">No external users yet.</td>
+                <td colSpan={9 + ROLES.length} className="px-3 py-2 text-muted-foreground">No external users yet.</td>
               </tr>
             ) : (
               users.map((user) => {
@@ -813,6 +807,11 @@ function ExternalUsersTab() {
                   <tr key={key} className="hover:bg-muted/30">
                     <td className="sticky left-0 bg-background pl-1.5 pr-0.5 py-1.5">
                       <div className="flex items-center gap-0">
+                        {user.status === "pending" && (
+                          <Button variant="ghost" size="icon-xs" title="Approve" disabled={approvingKey === key} onClick={() => handleApproveUser(user)}>
+                            {approvingKey === key ? <Loader2 className="size-3 animate-spin" /> : <Check />}
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon-xs" onClick={() => startEdit(user)}>
                           <Pencil />
                         </Button>
@@ -844,6 +843,13 @@ function ExternalUsersTab() {
                     <td className="px-3 py-1.5">{user.email}</td>
                     <td className="px-3 py-1.5">{user.first_name}</td>
                     <td className="px-3 py-1.5">{user.last_name}</td>
+                    <td className="px-3 py-1.5">
+                      {user.status === "pending" ? (
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">pending</span>
+                      ) : (
+                        <span className="text-muted-foreground">active</span>
+                      )}
+                    </td>
                     <td className="px-3 py-1.5 text-center">
                       <RoleBadge active={!!user.super_admin} />
                     </td>

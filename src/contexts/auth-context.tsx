@@ -8,6 +8,8 @@ import {
   useState,
 } from "react"
 
+import { toast } from "sonner"
+
 import { authFetch, clearAuthToken, getAuthToken, getRefreshToken, setAuthToken, setRefreshToken } from "@/lib/auth-fetch"
 import { providerFromIssuer } from "@/components/ui/provider-icon"
 
@@ -323,9 +325,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const params = new URLSearchParams(search)
       const token = params.get("token")
       const code = params.get("code")
+      const errorCode = params.get("error")
 
       // Clean URL to prevent double-processing in React Strict Mode
       window.history.replaceState({}, "", "/")
+
+      if (errorCode) {
+        const messages: Record<string, string> = {
+          pending: "Your access request is pending administrator approval.",
+          not_authorized: "Your account is not authorized for access. Contact an administrator.",
+          suspended: "Your account has been suspended.",
+        }
+        toast.error(messages[errorCode] ?? "Sign-in was not completed.")
+        setIsLoading(false)
+        return
+      }
 
       if (token) {
         applySession(token, params.get("refresh_token") ?? undefined)

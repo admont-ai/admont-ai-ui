@@ -216,6 +216,7 @@ export function AdminPanel({
 
 interface InternalUser {
   email: string
+  username?: string
   first_name?: string
   last_name?: string
   roles: string[]
@@ -232,7 +233,7 @@ function InternalUsersTab() {
   const [users, setUsers] = useState<InternalUser[]>([])
   const [loading, setLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<string | null>(null)
-  const [editEmail, setEditEmail] = useState("")
+  const [editUsername, setEditUsername] = useState("")
   const [editFirstname, setEditFirstname] = useState("")
   const [editLastname, setEditLastname] = useState("")
   const [editPassword, setEditPassword] = useState("")
@@ -244,7 +245,7 @@ function InternalUsersTab() {
 
   // Add form
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newEmail, setNewEmail] = useState("")
+  const [newUsername, setNewUsername] = useState("")
   const [newFirstname, setNewFirstname] = useState("")
   const [newLastname, setNewLastname] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -272,18 +273,18 @@ function InternalUsersTab() {
   }, [fetchUsers])
 
   async function handleAddUser() {
-    const email = newEmail.trim().toLowerCase()
-    if (!email || !newFirstname.trim() || !newLastname.trim() || !newPassword) return
+    const username = newUsername.trim()
+    if (!username || !newFirstname.trim() || !newLastname.trim() || !newPassword) return
     setAdding(true)
     try {
       const res = await authFetch("/admin/users/internal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, first_name: newFirstname.trim(), last_name: newLastname.trim(), password: newPassword, roles: newRoles, super_admin: newSuperAdmin }),
+        body: JSON.stringify({ username, first_name: newFirstname.trim(), last_name: newLastname.trim(), password: newPassword, roles: newRoles, super_admin: newSuperAdmin }),
       })
       if (res.ok) {
-        toast.success(`User "${email}" created`)
-        setNewEmail("")
+        toast.success(`User "${username}" created`)
+        setNewUsername("")
         setNewFirstname("")
         setNewLastname("")
         setNewPassword("")
@@ -302,15 +303,13 @@ function InternalUsersTab() {
   async function handleUpdateUser(originalEmail: string) {
     setSavingEdit(true)
     try {
-      const body: Record<string, string> = {}
-      const trimmedEmail = editEmail.trim().toLowerCase()
-      if (trimmedEmail && trimmedEmail !== originalEmail) body.email = trimmedEmail
+      const body: Record<string, unknown> = {}
       body.first_name = editFirstname.trim()
       body.last_name = editLastname.trim()
       if (editPassword) body.password = editPassword
-      ;(body as Record<string, unknown>).roles = editRoles
-      ;(body as Record<string, unknown>).super_admin = editSuperAdmin
-      ;(body as Record<string, unknown>).suspended = editSuspended
+      body.roles = editRoles
+      body.super_admin = editSuperAdmin
+      body.suspended = editSuspended
       const res = await authFetch(`/admin/users/internal/${encodeURIComponent(originalEmail)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -347,7 +346,7 @@ function InternalUsersTab() {
 
   function startEdit(user: InternalUser) {
     setEditingUser(user.email)
-    setEditEmail(user.email)
+    setEditUsername(user.username ?? user.email)
     setEditFirstname(user.first_name ?? "")
     setEditLastname(user.last_name ?? "")
     setEditPassword("")
@@ -390,10 +389,10 @@ function InternalUsersTab() {
               className={inputClass}
             />
             <input
-              type="email"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="Email *"
+              type="text"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="Username *"
               className={inputClass}
             />
             <input
@@ -409,12 +408,12 @@ function InternalUsersTab() {
             <Button
               size="sm"
               onClick={handleAddUser}
-              disabled={!newEmail.trim() || !newFirstname.trim() || !newLastname.trim() || !newPassword || adding}
+              disabled={!newUsername.trim() || !newFirstname.trim() || !newLastname.trim() || !newPassword || adding}
             >
               {adding && <Loader2 className="size-4 animate-spin" />}
               Add User
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { setShowAddForm(false); setNewEmail(""); setNewFirstname(""); setNewLastname(""); setNewPassword(""); setNewRoles([]); setNewSuperAdmin(false) }}>
+            <Button variant="outline" size="sm" onClick={() => { setShowAddForm(false); setNewUsername(""); setNewFirstname(""); setNewLastname(""); setNewPassword(""); setNewRoles([]); setNewSuperAdmin(false) }}>
               Cancel
             </Button>
           </div>
@@ -432,8 +431,8 @@ function InternalUsersTab() {
             <LabeledField label="Last Name *">
               <input type="text" value={editLastname} onChange={(e) => setEditLastname(e.target.value)} className={inputClass} />
             </LabeledField>
-            <LabeledField label="Email">
-              <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className={inputClass} />
+            <LabeledField label="Username">
+              <input type="text" value={editUsername} onChange={(e) => setEditUsername(e.target.value)} className={inputClass} disabled />
             </LabeledField>
             <LabeledField label="New Password">
               <input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} placeholder="Leave blank to keep current" className={inputClass} />
@@ -459,7 +458,7 @@ function InternalUsersTab() {
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="sticky left-0 bg-muted/50 pl-1.5 pr-0.5 py-1.5 w-[52px]" />
-              <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Email</th>
+              <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Username</th>
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">First Name</th>
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Last Name</th>
               <th className="px-3 py-1.5 text-center font-medium text-muted-foreground">Super Admin</th>
@@ -495,7 +494,7 @@ function InternalUsersTab() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete user &quot;{user.email}&quot;?</AlertDialogTitle>
+                            <AlertDialogTitle>Delete user &quot;{user.username ?? user.email}&quot;?</AlertDialogTitle>
                             <AlertDialogDescription>This will permanently remove the user account.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -506,7 +505,7 @@ function InternalUsersTab() {
                       </AlertDialog>
                     </div>
                   </td>
-                  <td className="px-3 py-1.5">{user.email}</td>
+                  <td className="px-3 py-1.5">{user.username ?? user.email}</td>
                   <td className="px-3 py-1.5">{user.first_name}</td>
                   <td className="px-3 py-1.5">{user.last_name}</td>
                   <td className="px-3 py-1.5 text-center">

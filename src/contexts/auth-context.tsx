@@ -45,9 +45,9 @@ interface AuthContextValue {
   providers: AuthProvider[]
   signupOpen: boolean
   login: (provider?: string) => void
-  loginInternal: (email: string, password: string) => Promise<InternalLoginResult>
+  loginInternal: (username: string, password: string) => Promise<InternalLoginResult>
   verifyTotp: (pendingToken: string, code: string) => Promise<void>
-  signup: (email: string, password: string, firstName: string, lastName: string) => Promise<void>
+  signup: (username: string, password: string, firstName: string, lastName: string) => Promise<void>
   logout: () => void
 }
 
@@ -255,11 +255,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Native internal login: returns {totpRequired} or applies the session.
   const loginInternal = useCallback(
-    async (email: string, password: string): Promise<InternalLoginResult> => {
+    async (username: string, password: string): Promise<InternalLoginResult> => {
       const res = await fetch("/auth/internal/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       })
       const data = (await res.json().catch(() => ({}))) as {
         error?: string
@@ -297,11 +297,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const signup = useCallback(
-    async (email: string, password: string, firstName: string, lastName: string) => {
+    async (username: string, password: string, firstName: string, lastName: string) => {
       const res = await fetch("/auth/internal/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, first_name: firstName, last_name: lastName }),
+        body: JSON.stringify({ username, password, first_name: firstName, last_name: lastName }),
       })
       const data = (await res.json().catch(() => ({}))) as {
         error?: string

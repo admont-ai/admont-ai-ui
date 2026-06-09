@@ -13,7 +13,7 @@ type Mode = "login" | "totp" | "signup"
 export function LoginPanel() {
   const { providers, signupOpen, login, loginInternal, verifyTotp, signup } = useAuth()
   const [mode, setMode] = useState<Mode>(signupOpen ? "signup" : "login")
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
@@ -28,11 +28,11 @@ export function LoginPanel() {
     setBusy(true)
     try {
       if (mode === "signup") {
-        await signup(email, password, firstName, lastName)
+        await signup(username, password, firstName, lastName)
       } else if (mode === "totp") {
         await verifyTotp(pendingToken, code.trim())
       } else {
-        const res = await loginInternal(email, password)
+        const res = await loginInternal(username, password)
         if (res.totpRequired) {
           setPendingToken(res.pendingToken ?? "")
           setCode("")
@@ -46,7 +46,17 @@ export function LoginPanel() {
     }
   }
 
-  const title = mode === "signup" ? "Create admin account" : mode === "totp" ? "Two-factor authentication" : "Sign in"
+  const isSignup = signupOpen && mode === "signup"
+
+  const title = isSignup
+    ? "Create admin account"
+    : mode === "totp"
+      ? "Two-factor authentication"
+      : "Sign in"
+
+  const subtitle = isSignup
+    ? "No users exist yet. Create the first administrator account."
+    : "Sign in to access your document repositories."
 
   return (
     <div className="flex h-full items-center justify-center px-6">
@@ -54,11 +64,7 @@ export function LoginPanel() {
         <div className="text-center space-y-2">
           <img src="/admont-ai-icon.png" alt="" width="48" height="48" className="mx-auto rounded-lg" />
           <h2 className="text-2xl font-bold">{title}</h2>
-          <p className="text-sm text-muted-foreground">
-            {mode === "signup"
-              ? "No users exist yet. Create the first administrator account."
-              : "Sign in to access your document repositories."}
-          </p>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
 
         <form onSubmit={submit} className="space-y-3">
@@ -75,19 +81,19 @@ export function LoginPanel() {
             />
           ) : (
             <>
-              {mode === "signup" && (
+              {isSignup && (
                 <div className="flex gap-2">
                   <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" className={inputClass} autoFocus />
                   <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" className={inputClass} />
                 </div>
               )}
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
                 className={inputClass}
-                autoFocus={mode === "login"}
+                autoFocus={!isSignup}
                 required
               />
               <input
@@ -96,7 +102,7 @@ export function LoginPanel() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 className={inputClass}
-                minLength={mode === "signup" ? 8 : undefined}
+                minLength={isSignup ? 8 : undefined}
                 required
               />
             </>
@@ -106,22 +112,16 @@ export function LoginPanel() {
 
           <Button type="submit" className="w-full" disabled={busy}>
             {busy && <Loader2 className="size-4 mr-2 animate-spin" />}
-            {mode === "signup" ? "Create account" : mode === "totp" ? "Verify" : "Sign in"}
+            {isSignup ? "Create account" : mode === "totp" ? "Verify" : "Sign in"}
           </Button>
         </form>
 
-        {mode === "login" && signupOpen && (
-          <button type="button" className="block mx-auto text-muted-foreground hover:text-foreground text-xs" onClick={() => { setError(""); setMode("signup") }}>
-            First time? Create the admin account
-          </button>
-        )}
-        {mode === "signup" && !busy && (
+        {isSignup && !busy && (
           <button type="button" className="block mx-auto text-muted-foreground hover:text-foreground text-xs" onClick={() => { setError(""); setMode("login") }}>
-            Back to sign in
+            Already have an account? Sign in
           </button>
         )}
-
-        {mode === "login" && providers.length > 0 && (
+        {!signupOpen && mode === "login" && providers.length > 0 && (
           <div className="space-y-2 border-t pt-4">
             <p className="text-muted-foreground text-center text-xs">or continue with</p>
             {providers.map((p) => (
@@ -130,6 +130,24 @@ export function LoginPanel() {
                 {p.display_name}
               </Button>
             ))}
+          </div>
+        )}
+        {signupOpen && mode === "login" && (
+          <div className="space-y-2 border-t pt-4">
+            {providers.length > 0 && (
+              <>
+                <p className="text-muted-foreground text-center text-xs">or continue with</p>
+                {providers.map((p) => (
+                  <Button key={p.name} variant="outline" className="w-full gap-2" onClick={() => login(p.name)}>
+                    <ProviderIcon provider={p.name} className="size-4" />
+                    {p.display_name}
+                  </Button>
+                ))}
+              </>
+            )}
+            <button type="button" className="block mx-auto text-muted-foreground hover:text-foreground text-xs" onClick={() => { setError(""); setMode("signup") }}>
+              First time? Create the admin account
+            </button>
           </div>
         )}
       </div>

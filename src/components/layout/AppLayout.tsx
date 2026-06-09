@@ -27,6 +27,7 @@ import { useAiLog } from "@/hooks/use-ai-log"
 import { fetchFileAtCommit } from "@/hooks/use-file-history"
 import type { FileHistoryEntry } from "@/types"
 import { ImageFileEditor } from "./ImageFileEditor"
+import { LoginPanel } from "@/components/auth/LoginPanel"
 import { AiAssistantPanel } from "./AiAssistantPanel"
 import { ConfluenceImportDialog } from "./ConfluenceImportDialog"
 import { DrawioFileEditor } from "./DrawioFileEditor"
@@ -409,16 +410,16 @@ export function AppLayout() {
               <ResizablePanelGroup orientation="horizontal">
                 <ResizablePanel id="doc" defaultSize="100%" minSize="40%">
                   <main className="h-full overflow-y-auto pt-3">
-                    {!reposLoading && repos.length === 0 ? (
+                    {!user ? (
+                      <LoginPanel />
+                    ) : !reposLoading && repos.length === 0 ? (
                       <div className="flex h-full justify-center px-6 pt-[30vh]">
                         <div className="text-center space-y-3">
                           <h2 className="text-3xl font-bold">Welcome to Admont-AI</h2>
                           <p className="text-lg text-muted-foreground">
-                            {!user
-                              ? "Please login to access document repositories."
-                              : permissions.repo_admin
-                                ? "No document repositories configured."
-                                : "Sorry but you don't have access to any document repository. Please contact the administrator."}
+                            {permissions.repo_admin
+                              ? "No document repositories configured."
+                              : "Sorry but you don't have access to any document repository. Please contact the administrator."}
                           </p>
                         </div>
                       </div>

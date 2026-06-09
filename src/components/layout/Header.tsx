@@ -1,6 +1,6 @@
 import type { RefObject } from "react"
 import type { PanelImperativeHandle } from "react-resizable-panels"
-import { Check, ClipboardCopy, Loader2, LogIn, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Settings, Shield, ShieldCheck, ShieldOff, Sparkles } from "lucide-react"
+import { Check, ClipboardCopy, Loader2, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Settings, Shield, ShieldCheck, ShieldOff, Sparkles } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ProviderIcon, formatProviderName } from "@/components/ui/provider-icon"
 import { useAuth } from "@/contexts/auth-context"
-import { LoginDialog } from "@/components/auth/LoginDialog"
 import { authFetch } from "@/lib/auth-fetch"
 import type { Repo } from "@/types"
 import { RepoSelector } from "./RepoSelector"
@@ -42,7 +41,6 @@ export function Header({
   const [collapsed, setCollapsed] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [totpDialogOpen, setTotpDialogOpen] = useState(false)
-  const [loginDialogOpen, setLoginDialogOpen] = useState(false)
   const { user, permissions, logout } = useAuth()
 
   function toggleSidebar() {
@@ -161,12 +159,7 @@ export function Header({
               <LogOut className="size-4" />
             </Button>
           </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={() => setLoginDialogOpen(true)}>
-            <LogIn className="size-4 mr-2" />
-            Sign in
-          </Button>
-        )}
+        ) : null}
       </div>
     </header>
     {passwordDialogOpen && (
@@ -174,9 +167,6 @@ export function Header({
     )}
     {totpDialogOpen && (
       <TotpDialog open={totpDialogOpen} onOpenChange={setTotpDialogOpen} />
-    )}
-    {loginDialogOpen && (
-      <LoginDialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen} />
     )}
   </>
   )

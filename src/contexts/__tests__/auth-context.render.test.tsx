@@ -82,9 +82,10 @@ describe("AuthProvider", () => {
     })
     mockGetAuthToken.mockReturnValue(token)
 
-    // /auth/providers returns empty array
+    // /auth/providers, /auth/internal/signup-status, /me/details
     mockAuthFetch
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ signup_open: false }), { status: 200 }))
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ name: "Test User", email: "user@test.com", roles: ["admin", "ai_user"] }), { status: 200 }),
       )

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -12,8 +12,12 @@ type Mode = "login" | "totp" | "signup"
 
 export function LoginPanel() {
   const { providers, signupOpen, login, loginInternal, verifyTotp, signup } = useAuth()
-  const [mode, setMode] = useState<Mode>(signupOpen ? "signup" : "login")
+  const [mode, setMode] = useState<Mode>("login")
   const [username, setUsername] = useState("")
+
+  useEffect(() => {
+    if (signupOpen) setMode("signup")
+  }, [signupOpen])
   const [password, setPassword] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")

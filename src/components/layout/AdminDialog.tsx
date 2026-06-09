@@ -238,6 +238,7 @@ function InternalUsersTab() {
   const [editPassword, setEditPassword] = useState("")
   const [editRoles, setEditRoles] = useState<string[]>([])
   const [editSuperAdmin, setEditSuperAdmin] = useState(false)
+  const [editSuspended, setEditSuspended] = useState(false)
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingUser, setDeletingUser] = useState<string | null>(null)
 
@@ -309,6 +310,7 @@ function InternalUsersTab() {
       if (editPassword) body.password = editPassword
       ;(body as Record<string, unknown>).roles = editRoles
       ;(body as Record<string, unknown>).super_admin = editSuperAdmin
+      ;(body as Record<string, unknown>).suspended = editSuspended
       const res = await authFetch(`/admin/users/internal/${encodeURIComponent(originalEmail)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -351,6 +353,7 @@ function InternalUsersTab() {
     setEditPassword("")
     setEditRoles([...user.roles])
     setEditSuperAdmin(!!user.super_admin)
+    setEditSuspended(!!user.suspended)
   }
 
   if (loading) {
@@ -437,6 +440,10 @@ function InternalUsersTab() {
             </LabeledField>
           </div>
           <RoleCheckboxes roles={editRoles} onChange={setEditRoles} superAdmin={editSuperAdmin} onSuperAdminChange={setEditSuperAdmin} />
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={editSuspended} onChange={(e) => setEditSuspended(e.target.checked)} />
+            Suspended (blocks sign-in)
+          </label>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => handleUpdateUser(editingUser)} disabled={savingEdit || !editFirstname.trim() || !editLastname.trim()}>
               {savingEdit && <Loader2 className="size-4 animate-spin" />}
@@ -553,6 +560,7 @@ function ExternalUsersTab() {
   const [editLastname, setEditLastname] = useState("")
   const [editRoles, setEditRoles] = useState<string[]>([])
   const [editSuperAdmin, setEditSuperAdmin] = useState(false)
+  const [editSuspended, setEditSuspended] = useState(false)
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
   const [approvingKey, setApprovingKey] = useState<string | null>(null)
@@ -642,6 +650,7 @@ function ExternalUsersTab() {
       body.last_name = editLastname.trim()
       body.roles = editRoles
       body.super_admin = editSuperAdmin
+      body.suspended = editSuspended
       const res = await authFetch(`/admin/users/external/${encodeURIComponent(user.provider)}/${encodeURIComponent(user.email)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -683,6 +692,7 @@ function ExternalUsersTab() {
     setEditLastname(user.last_name ?? "")
     setEditRoles([...user.roles])
     setEditSuperAdmin(!!user.super_admin)
+    setEditSuspended(user.status === "suspended")
   }
 
   if (loading) {
@@ -766,6 +776,10 @@ function ExternalUsersTab() {
               </LabeledField>
             </div>
             <RoleCheckboxes roles={editRoles} onChange={setEditRoles} superAdmin={editSuperAdmin} onSuperAdminChange={setEditSuperAdmin} />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={editSuspended} onChange={(e) => setEditSuspended(e.target.checked)} />
+              Suspended (blocks sign-in)
+            </label>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => handleUpdateUser(user)} disabled={savingEdit}>
                 {savingEdit && <Loader2 className="size-4 animate-spin" />}
@@ -846,6 +860,10 @@ function ExternalUsersTab() {
                     <td className="px-3 py-1.5">
                       {user.status === "pending" ? (
                         <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">pending</span>
+                      ) : user.status === "invited" ? (
+                        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">invited</span>
+                      ) : user.status === "suspended" ? (
+                        <span className="rounded bg-red-100 px-1.5 py-0.5 text-red-700 dark:bg-red-900/40 dark:text-red-400">suspended</span>
                       ) : (
                         <span className="text-muted-foreground">active</span>
                       )}

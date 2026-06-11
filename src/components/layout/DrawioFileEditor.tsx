@@ -163,7 +163,10 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
 
   const handleCancel = useCallback(() => {
     setEditing(false)
-  }, [])
+    // Pick up any draft saved during the editing session so the viewer
+    // shows the latest state instead of the stale pre-edit content.
+    refetch()
+  }, [refetch])
 
   const handleEdit = useCallback(() => {
     if (content != null) xmlRef.current = content

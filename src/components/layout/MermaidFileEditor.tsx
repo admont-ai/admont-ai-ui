@@ -155,7 +155,10 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
   const handleCancel = useCallback(() => {
     setEditing(false)
     if (content !== null) setCode(content)
-  }, [content])
+    // Pick up any draft saved during the editing session so the viewer
+    // shows the latest state instead of the stale pre-edit content.
+    refetch()
+  }, [content, refetch])
 
   const handleEdit = useCallback(() => {
     if (content != null) setCode(content)

@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import * as XLSX from "xlsx"
+import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef } from "ag-grid-community"
+import { AgGridReact } from "ag-grid-react"
 
 import { authFetch } from "@/lib/auth-fetch"
 import { EditorHeader } from "./EditorHeader"
 
-const MAX_RENDERED_ROWS = 1000
+ModuleRegistry.registerModules([AllCommunityModule])
 
 interface SpreadsheetViewerProps {
   repoSlug: string
@@ -13,12 +15,14 @@ interface SpreadsheetViewerProps {
   onDelete?: () => void
 }
 
+type CellValue = string | number | boolean | null
+
 type SheetData = {
   name: string
-  rows: (string | number | boolean | null)[][]
+  rows: CellValue[][]
 }
 
-/** Read-only table viewer for .xlsx and .csv files. */
+/** Read-only table viewer for .xlsx and .csv files with sorting & filtering. */
 export function SpreadsheetViewer({ repoSlug, filePath, onRename, onDelete }: SpreadsheetViewerProps) {
   const [sheets, setSheets] = useState<SheetData[] | null>(null)
   const [activeSheet, setActiveSheet] = useState(0)
@@ -54,20 +58,44 @@ export function SpreadsheetViewer({ repoSlug, filePath, onRename, onDelete }: Sp
     }
   }, [repoSlug, filePath])
 
+  const sheet = sheets?.[activeSheet]
+
+  const { columnDefs, rowData } = useMemo(() => {
+    const allRows = sheet?.rows ?? []
+    const headerRow = allRows[0] ?? []
+    const dataRows = allRows.slice(1)
+    const colCount = Math.max(headerRow.length, ...dataRows.map((r) => r.length), 1)
+
+    const columnDefs: ColDef[] = Array.from({ length: colCount }, (_, i) => ({
+      field: String(i),
+      headerName: headerRow[i] != null && String(headerRow[i]).trim() !== "" ? String(headerRow[i]) : `Column ${i + 1}`,
+    }))
+
+    const rowData = dataRows.map((row) => {
+      const obj: Record<string, CellValue> = {}
+      for (let i = 0; i < colCount; i++) {
+        obj[String(i)] = row[i] ?? null
+      }
+      return obj
+    })
+
+    return { columnDefs, rowData }
+  }, [sheet])
+
+  const defaultColDef = useMemo<ColDef>(() => ({
+    sortable: true,
+    filter: true,
+    resizable: true,
+    floatingFilter: true,
+    minWidth: 100,
+  }), [])
+
   if (error) {
     return <p className="px-6 text-destructive text-sm">{error}</p>
   }
   if (sheets === null) {
     return <p className="px-6 text-muted-foreground">Loading…</p>
   }
-
-  const sheet = sheets[activeSheet]
-  const allRows = sheet?.rows ?? []
-  const headerRow = allRows[0] ?? []
-  const dataRows = allRows.slice(1, 1 + MAX_RENDERED_ROWS)
-  const truncated = allRows.length - 1 > MAX_RENDERED_ROWS
-  const colCount = Math.max(headerRow.length, ...dataRows.map((r) => r.length), 1)
-  const columns = Array.from({ length: colCount }, (_, i) => i)
 
   return (
     <div className="flex flex-col -mt-3" style={{ height: "calc(100% + 0.75rem)" }}>
@@ -92,40 +120,17 @@ export function SpreadsheetViewer({ repoSlug, filePath, onRename, onDelete }: Sp
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
-        {allRows.length === 0 ? (
+      <div className="min-h-0 flex-1 px-4 pb-4 pt-3">
+        {rowData.length === 0 ? (
           <p className="py-4 text-muted-foreground text-sm">This sheet is empty.</p>
         ) : (
-          <table className="w-max min-w-full border-collapse text-sm">
-            <thead>
-              <tr>
-                {columns.map((i) => (
-                  <th
-                    key={i}
-                    className="sticky top-0 border bg-muted px-3 py-1.5 text-left font-medium whitespace-nowrap"
-                  >
-                    {headerRow[i] ?? ""}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dataRows.map((row, ri) => (
-                <tr key={ri} className="even:bg-muted/30">
-                  {columns.map((ci) => (
-                    <td key={ci} className="border px-3 py-1 whitespace-nowrap">
-                      {row[ci] ?? ""}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {truncated && (
-          <p className="py-3 text-xs text-muted-foreground">
-            Showing the first {MAX_RENDERED_ROWS.toLocaleString()} of {(allRows.length - 1).toLocaleString()} rows.
-          </p>
+          <AgGridReact
+            key={`${filePath}-${activeSheet}`}
+            theme={themeQuartz}
+            columnDefs={columnDefs}
+            rowData={rowData}
+            defaultColDef={defaultColDef}
+          />
         )}
       </div>
     </div>

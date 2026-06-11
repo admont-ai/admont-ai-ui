@@ -103,7 +103,7 @@ export function Header({
               <Cpu className="size-3.5 shrink-0" />
               <span className="truncate">{selectedModelName ?? "Select model"}</span>
             </SelectTrigger>
-            <SelectContent align="end">
+            <SelectContent position="popper" align="end">
               {modelProviders.length > 1 ? (
                 modelProviders.map((p) => (
                   <SelectGroup key={p}>

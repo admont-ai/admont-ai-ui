@@ -499,6 +499,8 @@ export function AiAssistantPanel({
                   </SelectContent>
                 </Select>
               )}
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
               {modelsLoading ? (
                 <div className="size-7 animate-pulse rounded bg-muted" />
               ) : (
@@ -510,7 +512,7 @@ export function AiAssistantPanel({
                   >
                     <Cpu className="size-3.5" />
                   </SelectTrigger>
-                  <SelectContent position="popper" side="top" align="start">
+                  <SelectContent position="popper" side="top" align="end">
                     {hasMultipleProviders ? (
                       providers.map((p) => (
                         <SelectGroup key={p}>
@@ -528,14 +530,14 @@ export function AiAssistantPanel({
                   </SelectContent>
                 </Select>
               )}
+              <button
+                onClick={() => handleSubmit()}
+                disabled={!canSubmit || loading}
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-30"
+              >
+                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
+              </button>
             </div>
-            <button
-              onClick={() => handleSubmit()}
-              disabled={!canSubmit || loading}
-              className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-30"
-            >
-              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
-            </button>
           </div>
         </div>
       </div>

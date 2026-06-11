@@ -1,5 +1,5 @@
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
-import { ArrowUp, BookOpenText, ChevronDown, Cpu, FileText, Library, Loader2, MessageSquarePlus, MessageSquareText, Pencil, Scissors, Sparkles, SpellCheck, Trash2, X } from "lucide-react"
+import { ArrowUp, BookOpenText, ChevronDown, Cpu, FileText, Library, Loader2, MessageSquarePlus, MessageSquareText, Sparkles, Trash2, X } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -26,7 +26,6 @@ import {
 import type { MarkdownEditorHandle } from "./MarkdownEditor"
 import type { AiMessage, DiagramSourceHandle, Repo } from "@/types"
 
-type Mode = "ask" | "generate" | "polish"
 type Scope = "page" | "repo" | "all"
 
 const SCOPES: { value: Scope; label: string; icon: typeof FileText }[] = [
@@ -38,7 +37,6 @@ const SCOPES: { value: Scope; label: string; icon: typeof FileText }[] = [
 interface AiAssistantPanelProps {
   editorRef: RefObject<MarkdownEditorHandle | null>
   diagramRef?: RefObject<DiagramSourceHandle | null>
-  readOnly?: boolean
   selectedText: string
   repos: Repo[]
   repoSlug: string
@@ -77,13 +75,6 @@ const SUGGESTIONS = [
   { icon: MessageSquareText, text: "Summarize the selected text in bullet points." },
 ]
 
-const EDIT_TOOLS = [
-  { icon: Pencil, label: "Improve writing", action: "improve" },
-  { icon: SpellCheck, label: "Fix spelling & grammar", action: "fix_spelling" },
-  { icon: Scissors, label: "Shorten", action: "shorten" },
-  { icon: BookOpenText, label: "Summarize", action: "summarize" },
-]
-
 const READ_TOOLS = [
   { icon: BookOpenText, label: "Summarize", action: "summarize" },
   { icon: MessageSquareText, label: "Explain", action: "explain" },
@@ -92,7 +83,6 @@ const READ_TOOLS = [
 export function AiAssistantPanel({
   editorRef,
   diagramRef,
-  readOnly,
   selectedText,
   repos,
   repoSlug,
@@ -101,13 +91,12 @@ export function AiAssistantPanel({
   onNavigate,
 }: AiAssistantPanelProps) {
   const {
-    addEntry, models, modelsLoading, selectedModel, setSelectedModel,
+    models, modelsLoading, selectedModel, setSelectedModel,
     conversations, activeConversationId, activeMessages,
     createConversation, switchConversation, deleteConversation,
     addMessage, refreshConversations,
   } = useAiLog()
   const { user } = useAuth()
-  const [mode, setMode] = useState<Mode>("ask")
   const [scope, setScope] = useState<Scope>("all")
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -133,20 +122,6 @@ export function AiAssistantPanel({
   const hasConversation = activeMessages.length > 0 || !!streamingResponse
   const diagramType = diagramTypeOf(filePath)
 
-  const availableModes: Mode[] = readOnly
-    ? ["ask"]
-    : diagramType
-      ? ["polish", "ask"]
-      : hasSelection
-        ? ["polish", "generate", "ask"]
-        : ["generate", "ask"]
-
-  useEffect(() => {
-    if (hasSelection && !readOnly && !diagramType) {
-      setMode("polish")
-    }
-  }, [hasSelection, readOnly, diagramType])
-
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [activeMessages.length, streamingResponse])
@@ -159,11 +134,9 @@ export function AiAssistantPanel({
   const providers = Object.keys(modelsByProvider).sort()
   const hasMultipleProviders = providers.length > 1
 
-  const sendRequest = useCallback(async (requestBody: Record<string, unknown>, resultMode: "show" | "insert" | "replace" | "diagram") => {
+  // Read-only LLM request whose result is shown in the panel (Summarize tool).
+  const sendRequest = useCallback(async (requestBody: Record<string, unknown>) => {
     if (loading) return
-    if (resultMode === "replace" || resultMode === "insert") {
-      editorRef.current?.saveSelection()
-    }
     setLoading(true)
     setStreamingResponse("")
     try {
@@ -174,37 +147,14 @@ export function AiAssistantPanel({
       })
       if (!res.ok) return
       const data = await res.json()
-      const raw: string = data.content ?? data.answer ?? ""
-      const action = (requestBody.action as string) ?? "ask"
-
-      if (resultMode === "show") {
-        setStreamingResponse(raw)
-      } else if (resultMode === "diagram") {
-        if (raw.trim()) {
-          diagramRef?.current?.setSource(raw)
-        }
-        if (data.notes) setStreamingResponse(data.notes)
-        addEntry({ action: "polish", input: (requestBody.instructions as string) ?? action, summary: data.notes ?? "", usage: data.usage })
-      } else if (resultMode === "insert") {
-        editorRef.current?.focus()
-        await new Promise((r) => setTimeout(r, 50))
-        await editorRef.current?.restoreSelection()
-        editorRef.current?.insertMarkdown(raw)
-        addEntry({ action: "generate", input: (requestBody.prompt as string) ?? "", summary: data.summary ?? "", usage: data.usage })
-      } else {
-        editorRef.current?.focus()
-        await new Promise((r) => setTimeout(r, 50))
-        await editorRef.current?.restoreSelection()
-        editorRef.current?.insertMarkdown(raw)
-        addEntry({ action: "polish", input: action, summary: data.notes ?? "", usage: data.usage })
-      }
+      setStreamingResponse(data.content ?? data.answer ?? "")
       setInput("")
     } catch {
       // errors handled by authFetch
     } finally {
       setLoading(false)
     }
-  }, [selectedModel, editorRef, diagramRef, addEntry, loading])
+  }, [selectedModel, loading])
 
   const sendRagSearch = useCallback(async (query: string, context?: string) => {
     if (loading || !query.trim()) return
@@ -282,37 +232,22 @@ export function AiAssistantPanel({
 
   const handleSubmit = useCallback(async (overrideInput?: string) => {
     const text = overrideInput ?? input
-    if (mode === "ask") {
-      const pageContent = diagramType
-        ? diagramRef?.current?.getSource() ?? ""
-        : editorRef.current?.getMarkdown() ?? ""
-      let context: string | undefined
-      if (liveSelection && scope === "page" && pageContent) {
-        context = `[Current page: ${filePath}]\n${pageContent}\n\n[Selected text]\n${liveSelection}`
-      } else if (liveSelection) {
-        context = `[Selected text from ${filePath}]\n${liveSelection}`
-      } else if (pageContent) {
-        context = `[Current page: ${filePath}]\n${pageContent}`
-      }
-      await sendRagSearch(text, context)
-    } else if (mode === "generate") {
-      await sendRequest({ action: "generate", prompt: text }, "insert")
-    } else if (diagramType) {
-      const source = diagramRef?.current?.getSource() ?? ""
-      if (!source) return
-      await sendRequest(
-        { action: "polish", content: source, instructions: text || undefined, file_type: diagramType },
-        "diagram",
-      )
-    } else {
-      const markdownContent = editorRef.current?.getSelectionMarkdown() || liveSelection
-      await sendRequest({ action: "polish", content: markdownContent, instructions: text || undefined }, "replace")
+    const pageContent = diagramType
+      ? diagramRef?.current?.getSource() ?? ""
+      : editorRef.current?.getMarkdown() ?? ""
+    let context: string | undefined
+    if (liveSelection && scope === "page" && pageContent) {
+      context = `[Current page: ${filePath}]\n${pageContent}\n\n[Selected text]\n${liveSelection}`
+    } else if (liveSelection) {
+      context = `[Selected text from ${filePath}]\n${liveSelection}`
+    } else if (pageContent) {
+      context = `[Current page: ${filePath}]\n${pageContent}`
     }
-  }, [mode, scope, input, liveSelection, filePath, editorRef, diagramRef, diagramType, sendRequest, sendRagSearch])
+    await sendRagSearch(text, context)
+  }, [scope, input, liveSelection, filePath, editorRef, diagramRef, diagramType, sendRagSearch])
 
   const handleSuggestionClick = useCallback((text: string) => {
     setInput(text)
-    setMode("ask")
     const pageContent = editorRef.current?.getMarkdown() ?? ""
     const context = liveSelection
       ? `[Selected text from ${filePath}]\n${liveSelection}`
@@ -324,14 +259,11 @@ export function AiAssistantPanel({
 
   const handleQuickTool = useCallback((tool: { action: string }) => {
     if (tool.action === "summarize") {
-      sendRequest({ action: "summarize", content: liveSelection }, "show")
-    } else if (tool.action === "explain") {
-      sendRagSearch(`Explain the following text:\n\n${liveSelection}`)
+      sendRequest({ action: "summarize", content: liveSelection })
     } else {
-      const markdownContent = editorRef.current?.getSelectionMarkdown() || liveSelection
-      sendRequest({ action: tool.action, content: markdownContent }, "replace")
+      sendRagSearch(`Explain the following text:\n\n${liveSelection}`)
     }
-  }, [liveSelection, editorRef, sendRequest, sendRagSearch])
+  }, [liveSelection, sendRequest, sendRagSearch])
 
   const handleNewConversation = useCallback(() => {
     switchConversation(null)
@@ -343,7 +275,7 @@ export function AiAssistantPanel({
     await deleteConversation(id)
   }, [deleteConversation])
 
-  const canSubmit = mode === "polish" && !diagramType ? hasSelection : input.trim().length > 0
+  const canSubmit = input.trim().length > 0
   const firstName = user?.name?.split(" ")[0] ?? ""
   const activeConv = conversations.find((c) => c.id === activeConversationId)
 
@@ -450,28 +382,9 @@ export function AiAssistantPanel({
 
       {/* Bottom input area */}
       <div className="border-t bg-muted/30 px-3 py-3">
-        {availableModes.length > 1 && (
-          <div className="flex gap-1 mb-2">
-            {availableModes.map((m) => (
-              <button
-                key={m}
-                onClick={() => { setMode(m); setStreamingResponse("") }}
-                className={
-                  "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors " +
-                  (mode === m
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground")
-                }
-              >
-                {m === "ask" ? "Ask" : m === "generate" ? "Generate" : diagramType ? "Edit diagram" : "Improve writing"}
-              </button>
-            ))}
-          </div>
-        )}
-
         {hasSelection && !loading && !diagramType && (
           <div className="flex flex-wrap gap-1.5 mb-2">
-            {(readOnly ? READ_TOOLS : EDIT_TOOLS).map((tool) => (
+            {READ_TOOLS.map((tool) => (
               <button
                 key={tool.label}
                 onClick={() => handleQuickTool(tool)}
@@ -489,15 +402,7 @@ export function AiAssistantPanel({
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              mode === "ask"
-                ? "Ask a question…"
-                : mode === "generate"
-                  ? "Describe what to generate…"
-                  : diagramType
-                    ? "Describe the changes to the diagram…"
-                    : "Instructions (optional)…"
-            }
+            placeholder="Ask a question…"
             rows={2}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -509,7 +414,7 @@ export function AiAssistantPanel({
           />
           <div className="flex items-center justify-between px-2.5 pb-2">
             <div className="flex items-center gap-0.5 min-w-0">
-              {mode === "ask" && repos.some((r) => r.search_provider) && (
+              {repos.some((r) => r.search_provider) && (
                 <Select value={scope} onValueChange={(v) => setScope(v as Scope)}>
                   <SelectTrigger
                     size="sm"

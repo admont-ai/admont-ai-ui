@@ -29,6 +29,7 @@ import type { DiagramSourceHandle, FileHistoryEntry } from "@/types"
 import { ImageFileEditor } from "./ImageFileEditor"
 import { LoginPanel } from "@/components/auth/LoginPanel"
 import { AiAssistantPanel } from "./AiAssistantPanel"
+import { AiEditBox } from "./AiEditBox"
 import { ConfluenceImportDialog } from "./ConfluenceImportDialog"
 import { DrawioFileEditor } from "./DrawioFileEditor"
 import { LaTeXFileEditor } from "./LaTeXFileEditor"
@@ -506,7 +507,7 @@ export function AppLayout() {
                             onPublish={handlePublish}
                             onCancel={handleCancel}
                           />
-                          <div className="min-h-0 flex-1">
+                          <div className="relative min-h-0 flex-1">
                             <MarkdownEditor
                               key={restoredMarkdown != null ? "restored" : "edit"}
                               ref={editorRef}
@@ -517,6 +518,7 @@ export function AppLayout() {
                               onDiagramSaved={handleDiagramSaved}
                               onNavigate={handleSearchSelect}
                             />
+                            {aiAvailable && <AiEditBox editorRef={editorRef} />}
                           </div>
                         </div>
                       ) : diffOldMarkdown != null ? (
@@ -618,11 +620,6 @@ export function AppLayout() {
                       <AiAssistantPanel
                         editorRef={editorRef}
                         diagramRef={diagramRef}
-                        readOnly={
-                          selectedFilePath && (isDrawioFile(selectedFilePath) || isMermaidFile(selectedFilePath))
-                            ? !canEdit
-                            : !editing
-                        }
                         selectedText={aiSelectedText}
                         repos={repos}
                         repoSlug={selectedRepoSlug}

@@ -11,6 +11,7 @@ import type { DiagramSourceHandle, FileHistoryEntry } from "@/types"
 import { detectDiagramType } from "@/components/mermaid-editor/diagram-detector"
 import type { VisualDiagramType } from "@/components/mermaid-editor/types"
 import { MermaidVisualEditor } from "@/components/mermaid-editor/MermaidVisualEditor"
+import { AiEditBox } from "./AiEditBox"
 import { EditorHeader } from "./EditorHeader"
 import { FileHistoryPanel } from "./FileHistoryPanel"
 
@@ -78,18 +79,21 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     lastEditSignal.current = editSignal
   }, [editSignal]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Expose the diagram source to the AI assistant.
+  // Apply an AI-produced diagram source to the open editor.
+  const applyAiResult = useCallback((source: string) => {
+    codeInitializedRef.current = true
+    setCode(source)
+    const detection = detectDiagramType(source)
+    setVisualDiagramType(detection.isVisual ? (detection.type as VisualDiagramType) : null)
+    setVisualEditorKey((k) => k + 1)
+    if (canEdit) setEditing(true)
+  }, [canEdit])
+
+  // Expose the diagram source to the AI assistant side panel (ask context).
   useImperativeHandle(handleRef, () => ({
     getSource: () => (editing ? code : (content ?? "")),
-    setSource: (source: string) => {
-      codeInitializedRef.current = true
-      setCode(source)
-      const detection = detectDiagramType(source)
-      setVisualDiagramType(detection.isVisual ? (detection.type as VisualDiagramType) : null)
-      setVisualEditorKey((k) => k + 1)
-      if (canEdit) setEditing(true)
-    },
-  }), [editing, code, content, canEdit])
+    setSource: applyAiResult,
+  }), [editing, code, content, applyAiResult])
 
   const buildUploadUrl = useCallback(
     (path: string) => `/repos/${encodeURIComponent(repoSlug)}/upload/${path}`,
@@ -280,7 +284,7 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
       >
         {editorToggle}
       </EditorHeader>
-      <div className="min-h-0 flex-1 p-4">
+      <div className="relative min-h-0 flex-1 p-4">
         {editorMode === "visual" && visualDiagramType ? (
           <MermaidVisualEditor
             key={visualEditorKey}
@@ -311,6 +315,11 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
             </div>
           </div>
         )}
+        <AiEditBox
+          fileType="mermaid"
+          getDiagramSource={() => code}
+          onDiagramResult={applyAiResult}
+        />
       </div>
     </div>
   ) : diffOldContent != null ? (

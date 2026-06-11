@@ -7,6 +7,7 @@ import { useDocumentContent } from "@/hooks/use-document-content"
 import { useDocumentSave } from "@/hooks/use-document-save"
 import { fetchFileAtCommit } from "@/hooks/use-file-history"
 import type { DiagramSourceHandle, FileHistoryEntry } from "@/types"
+import { AiEditBox } from "./AiEditBox"
 import { EditorHeader } from "./EditorHeader"
 import { FileHistoryPanel } from "./FileHistoryPanel"
 
@@ -63,23 +64,26 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
     lastEditSignal.current = editSignal
   }, [editSignal]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Expose the diagram source to the AI assistant. setSource loads the new
-  // XML into the open editor, or switches to edit mode (whose init handshake
-  // picks up xmlRef) so the user can review and save/publish.
+  // Apply an AI-produced diagram source: load it into the open editor, or
+  // switch to edit mode (whose init handshake picks up xmlRef) so the user
+  // can review and save/publish.
+  const applyAiResult = useCallback((source: string) => {
+    xmlRef.current = source
+    if (editing) {
+      iframeRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ action: "load", xml: source }),
+        "https://embed.diagrams.net",
+      )
+    } else if (canEdit) {
+      setEditing(true)
+    }
+  }, [editing, canEdit])
+
+  // Expose the diagram source to the AI assistant side panel (ask context).
   useImperativeHandle(handleRef, () => ({
     getSource: () => xmlRef.current || content || "",
-    setSource: (source: string) => {
-      xmlRef.current = source
-      if (editing) {
-        iframeRef.current?.contentWindow?.postMessage(
-          JSON.stringify({ action: "load", xml: source }),
-          "https://embed.diagrams.net",
-        )
-      } else if (canEdit) {
-        setEditing(true)
-      }
-    },
-  }), [editing, content, canEdit])
+    setSource: applyAiResult,
+  }), [content, applyAiResult])
 
   const buildUploadUrl = useCallback(
     (path: string) => `/repos/${encodeURIComponent(repoSlug)}/upload/${path}`,
@@ -339,13 +343,18 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
         onPublish={handlePublish}
         onCancel={handleCancel}
       />
-      <div className="min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1">
         <iframe
           ref={iframeRef}
           src={DRAWIO_EMBED_URL}
           className="h-full w-full border-0"
           title="Draw.io Editor"
           onLoad={() => setIframeLoaded(true)}
+        />
+        <AiEditBox
+          fileType="drawio"
+          getDiagramSource={() => xmlRef.current}
+          onDiagramResult={applyAiResult}
         />
       </div>
     </div>

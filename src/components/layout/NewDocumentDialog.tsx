@@ -20,11 +20,11 @@ import {
 } from "@/components/ui/select"
 
 const FILE_TYPES = [
-  { label: "Markdown", extension: ".md" },
-  { label: "LaTeX", extension: ".tex" },
-  { label: "Draw.io", extension: ".drawio" },
-  { label: "Mermaid", extension: ".mmd" },
-  { label: "Text", extension: "" },
+  { label: "Markdown", extension: ".md", type: "markdown" },
+  { label: "LaTeX", extension: ".tex", type: "latex" },
+  { label: "Draw.io", extension: ".drawio", type: "drawio" },
+  { label: "Mermaid", extension: ".mmd", type: "mermaid" },
+  { label: "Text", extension: "", type: "text" },
 ] as const
 
 type FileType = (typeof FILE_TYPES)[number]
@@ -75,7 +75,8 @@ export function NewDocumentDialog({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "generate",
-            prompt: `Generate ${fileType.label} content:\n\n${aiPrompt}`,
+            prompt: aiPrompt,
+            file_type: fileType.type,
             model: selectedModel || undefined,
           }),
         })

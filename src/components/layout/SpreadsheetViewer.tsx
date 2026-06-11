@@ -84,9 +84,9 @@ export function SpreadsheetViewer({ repoSlug, filePath, onRename, onDelete }: Sp
 
   const defaultColDef = useMemo<ColDef>(() => ({
     sortable: true,
+    // Filters open from the funnel button in the column header (no floating filter row).
     filter: true,
     resizable: true,
-    floatingFilter: true,
     minWidth: 100,
   }), [])
 

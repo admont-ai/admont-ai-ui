@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { RotateCcw, X } from "lucide-react"
 
 import { authFetch } from "@/lib/auth-fetch"
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useDocumentContent } from "@/hooks/use-document-content"
 import { useDocumentSave } from "@/hooks/use-document-save"
 import { fetchFileAtCommit } from "@/hooks/use-file-history"
-import type { FileHistoryEntry } from "@/types"
+import type { DiagramSourceHandle, FileHistoryEntry } from "@/types"
 import { EditorHeader } from "./EditorHeader"
 import { FileHistoryPanel } from "./FileHistoryPanel"
 
@@ -24,11 +24,12 @@ interface DrawioFileEditorProps {
   canEdit?: boolean
   initialEditing?: boolean
   editSignal?: number
+  handleRef?: RefObject<DiagramSourceHandle | null>
   onRename?: () => void
   onDelete?: () => void
 }
 
-export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEditing, editSignal, onRename, onDelete }: DrawioFileEditorProps) {
+export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEditing, editSignal, handleRef, onRename, onDelete }: DrawioFileEditorProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const viewerRef = useRef<HTMLIFrameElement>(null)
   const xmlRef = useRef("")
@@ -61,6 +62,24 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
     if (editSignal !== lastEditSignal.current && canEdit) setEditing(true)
     lastEditSignal.current = editSignal
   }, [editSignal]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Expose the diagram source to the AI assistant. setSource loads the new
+  // XML into the open editor, or switches to edit mode (whose init handshake
+  // picks up xmlRef) so the user can review and save/publish.
+  useImperativeHandle(handleRef, () => ({
+    getSource: () => xmlRef.current || content || "",
+    setSource: (source: string) => {
+      xmlRef.current = source
+      if (editing) {
+        iframeRef.current?.contentWindow?.postMessage(
+          JSON.stringify({ action: "load", xml: source }),
+          "https://embed.diagrams.net",
+        )
+      } else if (canEdit) {
+        setEditing(true)
+      }
+    },
+  }), [editing, content, canEdit])
 
   const buildUploadUrl = useCallback(
     (path: string) => `/repos/${encodeURIComponent(repoSlug)}/upload/${path}`,

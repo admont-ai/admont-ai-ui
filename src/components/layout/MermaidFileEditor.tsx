@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { Eye, Code2, RotateCcw, X } from "lucide-react"
 import mermaid from "mermaid"
 
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useDocumentContent } from "@/hooks/use-document-content"
 import { useDocumentSave } from "@/hooks/use-document-save"
 import { fetchFileAtCommit } from "@/hooks/use-file-history"
-import type { FileHistoryEntry } from "@/types"
+import type { DiagramSourceHandle, FileHistoryEntry } from "@/types"
 import { detectDiagramType } from "@/components/mermaid-editor/diagram-detector"
 import type { VisualDiagramType } from "@/components/mermaid-editor/types"
 import { MermaidVisualEditor } from "@/components/mermaid-editor/MermaidVisualEditor"
@@ -27,11 +27,12 @@ interface MermaidFileEditorProps {
   canEdit?: boolean
   initialEditing?: boolean
   editSignal?: number
+  handleRef?: RefObject<DiagramSourceHandle | null>
   onRename?: () => void
   onDelete?: () => void
 }
 
-export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialEditing, editSignal, onRename, onDelete }: MermaidFileEditorProps) {
+export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialEditing, editSignal, handleRef, onRename, onDelete }: MermaidFileEditorProps) {
   const [code, setCode] = useState("")
   const [editing, setEditing] = useState(!!initialEditing)
   const [previewHtml, setPreviewHtml] = useState("")
@@ -76,6 +77,19 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     if (editSignal !== lastEditSignal.current && canEdit) setEditing(true)
     lastEditSignal.current = editSignal
   }, [editSignal]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Expose the diagram source to the AI assistant.
+  useImperativeHandle(handleRef, () => ({
+    getSource: () => (editing ? code : (content ?? "")),
+    setSource: (source: string) => {
+      codeInitializedRef.current = true
+      setCode(source)
+      const detection = detectDiagramType(source)
+      setVisualDiagramType(detection.isVisual ? (detection.type as VisualDiagramType) : null)
+      setVisualEditorKey((k) => k + 1)
+      if (canEdit) setEditing(true)
+    },
+  }), [editing, code, content, canEdit])
 
   const buildUploadUrl = useCallback(
     (path: string) => `/repos/${encodeURIComponent(repoSlug)}/upload/${path}`,

@@ -25,7 +25,7 @@ import { useRepos } from "@/hooks/use-repos"
 import { useAuth } from "@/contexts/auth-context"
 import { useAiLog } from "@/hooks/use-ai-log"
 import { fetchFileAtCommit } from "@/hooks/use-file-history"
-import type { FileHistoryEntry } from "@/types"
+import type { DiagramSourceHandle, FileHistoryEntry } from "@/types"
 import { ImageFileEditor } from "./ImageFileEditor"
 import { LoginPanel } from "@/components/auth/LoginPanel"
 import { AiAssistantPanel } from "./AiAssistantPanel"
@@ -86,6 +86,7 @@ function parseLocationPath(): { repo: string; file: string } {
 export function AppLayout() {
   const sidebarRef = usePanelRef()
   const editorRef = useRef<MarkdownEditorHandle>(null)
+  const diagramRef = useRef<DiagramSourceHandle>(null)
   const { repos, loading: reposLoading, refresh: refreshRepos } = useRepos()
 
   // Initialise from URL deep link
@@ -448,6 +449,7 @@ export function AppLayout() {
                         canEdit={canEdit}
                         initialEditing={editOnLoad}
                         editSignal={editSignal}
+                        handleRef={diagramRef}
                         onRename={canEdit ? () => setRenamingFile(true) : undefined}
                         onDelete={canDeleteFile ? handleDeleteFile : undefined}
                       />
@@ -459,6 +461,7 @@ export function AppLayout() {
                         canEdit={canEdit}
                         initialEditing={editOnLoad}
                         editSignal={editSignal}
+                        handleRef={diagramRef}
                         onRename={canEdit ? () => setRenamingFile(true) : undefined}
                         onDelete={canDeleteFile ? handleDeleteFile : undefined}
                       />
@@ -614,7 +617,12 @@ export function AppLayout() {
                     <ResizablePanel id="ai-panel" defaultSize="35%" minSize="15%" maxSize="50%">
                       <AiAssistantPanel
                         editorRef={editorRef}
-                        readOnly={!editing}
+                        diagramRef={diagramRef}
+                        readOnly={
+                          selectedFilePath && (isDrawioFile(selectedFilePath) || isMermaidFile(selectedFilePath))
+                            ? !canEdit
+                            : !editing
+                        }
                         selectedText={aiSelectedText}
                         repos={repos}
                         repoSlug={selectedRepoSlug}

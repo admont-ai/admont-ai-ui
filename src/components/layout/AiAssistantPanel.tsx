@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { MarkdownEditorHandle } from "./MarkdownEditor"
-import type { AiMessage, Repo } from "@/types"
+import type { AiMessage, DiagramSourceHandle, Repo } from "@/types"
 
 type Mode = "ask" | "generate" | "polish"
 type Scope = "page" | "repo" | "all"
@@ -37,6 +37,7 @@ const SCOPES: { value: Scope; label: string; icon: typeof FileText }[] = [
 
 interface AiAssistantPanelProps {
   editorRef: RefObject<MarkdownEditorHandle | null>
+  diagramRef?: RefObject<DiagramSourceHandle | null>
   readOnly?: boolean
   selectedText: string
   repos: Repo[]
@@ -44,6 +45,14 @@ interface AiAssistantPanelProps {
   filePath: string
   onClose: () => void
   onNavigate?: (repoSlug: string, filePath: string) => void
+}
+
+/** Diagram file type of the current file, or null for text/markdown files. */
+function diagramTypeOf(filePath: string): "mermaid" | "drawio" | null {
+  const lower = filePath.toLowerCase()
+  if (lower.endsWith(".mmd")) return "mermaid"
+  if (lower.endsWith(".drawio")) return "drawio"
+  return null
 }
 
 function formatTime(date: Date | string) {
@@ -82,6 +91,7 @@ const READ_TOOLS = [
 
 export function AiAssistantPanel({
   editorRef,
+  diagramRef,
   readOnly,
   selectedText,
   repos,
@@ -121,18 +131,21 @@ export function AiAssistantPanel({
   const currentSelection = liveSelection.trim()
   const hasSelection = currentSelection.length > 0
   const hasConversation = activeMessages.length > 0 || !!streamingResponse
+  const diagramType = diagramTypeOf(filePath)
 
   const availableModes: Mode[] = readOnly
     ? ["ask"]
-    : hasSelection
-      ? ["polish", "generate", "ask"]
-      : ["generate", "ask"]
+    : diagramType
+      ? ["polish", "ask"]
+      : hasSelection
+        ? ["polish", "generate", "ask"]
+        : ["generate", "ask"]
 
   useEffect(() => {
-    if (hasSelection && !readOnly) {
+    if (hasSelection && !readOnly && !diagramType) {
       setMode("polish")
     }
-  }, [hasSelection, readOnly])
+  }, [hasSelection, readOnly, diagramType])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -146,7 +159,7 @@ export function AiAssistantPanel({
   const providers = Object.keys(modelsByProvider).sort()
   const hasMultipleProviders = providers.length > 1
 
-  const sendRequest = useCallback(async (requestBody: Record<string, unknown>, resultMode: "show" | "insert" | "replace") => {
+  const sendRequest = useCallback(async (requestBody: Record<string, unknown>, resultMode: "show" | "insert" | "replace" | "diagram") => {
     if (loading) return
     if (resultMode === "replace" || resultMode === "insert") {
       editorRef.current?.saveSelection()
@@ -166,6 +179,12 @@ export function AiAssistantPanel({
 
       if (resultMode === "show") {
         setStreamingResponse(raw)
+      } else if (resultMode === "diagram") {
+        if (raw.trim()) {
+          diagramRef?.current?.setSource(raw)
+        }
+        if (data.notes) setStreamingResponse(data.notes)
+        addEntry({ action: "polish", input: (requestBody.instructions as string) ?? action, summary: data.notes ?? "", usage: data.usage })
       } else if (resultMode === "insert") {
         editorRef.current?.focus()
         await new Promise((r) => setTimeout(r, 50))
@@ -185,7 +204,7 @@ export function AiAssistantPanel({
     } finally {
       setLoading(false)
     }
-  }, [selectedModel, editorRef, addEntry, loading])
+  }, [selectedModel, editorRef, diagramRef, addEntry, loading])
 
   const sendRagSearch = useCallback(async (query: string, context?: string) => {
     if (loading || !query.trim()) return
@@ -264,7 +283,9 @@ export function AiAssistantPanel({
   const handleSubmit = useCallback(async (overrideInput?: string) => {
     const text = overrideInput ?? input
     if (mode === "ask") {
-      const pageContent = editorRef.current?.getMarkdown() ?? ""
+      const pageContent = diagramType
+        ? diagramRef?.current?.getSource() ?? ""
+        : editorRef.current?.getMarkdown() ?? ""
       let context: string | undefined
       if (liveSelection && scope === "page" && pageContent) {
         context = `[Current page: ${filePath}]\n${pageContent}\n\n[Selected text]\n${liveSelection}`
@@ -276,11 +297,18 @@ export function AiAssistantPanel({
       await sendRagSearch(text, context)
     } else if (mode === "generate") {
       await sendRequest({ action: "generate", prompt: text }, "insert")
+    } else if (diagramType) {
+      const source = diagramRef?.current?.getSource() ?? ""
+      if (!source) return
+      await sendRequest(
+        { action: "polish", content: source, instructions: text || undefined, file_type: diagramType },
+        "diagram",
+      )
     } else {
       const markdownContent = editorRef.current?.getSelectionMarkdown() || liveSelection
       await sendRequest({ action: "polish", content: markdownContent, instructions: text || undefined }, "replace")
     }
-  }, [mode, scope, input, liveSelection, filePath, editorRef, sendRequest, sendRagSearch])
+  }, [mode, scope, input, liveSelection, filePath, editorRef, diagramRef, diagramType, sendRequest, sendRagSearch])
 
   const handleSuggestionClick = useCallback((text: string) => {
     setInput(text)
@@ -435,13 +463,13 @@ export function AiAssistantPanel({
                     : "text-muted-foreground hover:text-foreground")
                 }
               >
-                {m === "ask" ? "Ask" : m === "generate" ? "Generate" : "Improve writing"}
+                {m === "ask" ? "Ask" : m === "generate" ? "Generate" : diagramType ? "Edit diagram" : "Improve writing"}
               </button>
             ))}
           </div>
         )}
 
-        {hasSelection && !loading && (
+        {hasSelection && !loading && !diagramType && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {(readOnly ? READ_TOOLS : EDIT_TOOLS).map((tool) => (
               <button
@@ -466,7 +494,9 @@ export function AiAssistantPanel({
                 ? "Ask a question…"
                 : mode === "generate"
                   ? "Describe what to generate…"
-                  : "Instructions (optional)…"
+                  : diagramType
+                    ? "Describe the changes to the diagram…"
+                    : "Instructions (optional)…"
             }
             rows={2}
             onKeyDown={(e) => {

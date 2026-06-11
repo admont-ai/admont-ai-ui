@@ -66,6 +66,7 @@
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^4.6.5",
+    "react-zoom-pan-pinch": "^4.0.3",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",

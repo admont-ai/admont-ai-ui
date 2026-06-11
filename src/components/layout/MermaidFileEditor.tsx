@@ -1,6 +1,7 @@
 import { type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
-import { Eye, Code2, RotateCcw, X } from "lucide-react"
+import { Eye, Code2, Maximize, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react"
 import mermaid from "mermaid"
+import { TransformComponent, TransformWrapper, useControls } from "react-zoom-pan-pinch"
 
 import { authFetch } from "@/lib/auth-fetch"
 import { Button } from "@/components/ui/button"
@@ -21,6 +22,25 @@ mermaid.initialize({
   htmlLabels: false,
   flowchart: { htmlLabels: false },
 })
+
+// Zoom buttons overlaid on the diagram viewer (must live inside TransformWrapper).
+function ZoomControls() {
+  const { zoomIn, zoomOut, resetTransform } = useControls()
+  const btn = "flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+  return (
+    <div className="absolute right-3 top-3 z-10 flex flex-col gap-1">
+      <button className={btn} title="Zoom in" onClick={() => zoomIn()}>
+        <ZoomIn className="size-3.5" />
+      </button>
+      <button className={btn} title="Zoom out" onClick={() => zoomOut()}>
+        <ZoomOut className="size-3.5" />
+      </button>
+      <button className={btn} title="Reset zoom" onClick={() => resetTransform()}>
+        <Maximize className="size-3.5" />
+      </button>
+    </div>
+  )
+}
 
 interface MermaidFileEditorProps {
   repoSlug: string
@@ -384,14 +404,22 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
         onRename={onRename}
         onDelete={onDelete}
       />
-      <div className="flex flex-1 items-center justify-center p-6">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {previewHtml ? (
-          <div
-            className="[&_svg]:max-h-full [&_svg]:max-w-full"
-            dangerouslySetInnerHTML={{ __html: previewHtml }}
-          />
+          <TransformWrapper minScale={0.2} maxScale={8} wheel={{ step: 0.1 }}>
+            <ZoomControls />
+            <TransformComponent
+              wrapperStyle={{ width: "100%", height: "100%", cursor: "grab" }}
+              contentStyle={{ width: "100%", height: "100%" }}
+            >
+              <div
+                className="flex h-full w-full items-center justify-center p-6 [&_svg]:max-h-full [&_svg]:max-w-full"
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            </TransformComponent>
+          </TransformWrapper>
         ) : (
-          <p className="text-muted-foreground text-sm">Empty diagram</p>
+          <p className="p-6 text-muted-foreground text-sm">Empty diagram</p>
         )}
       </div>
     </div>

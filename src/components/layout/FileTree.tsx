@@ -23,23 +23,12 @@ function displayName(name: string) {
   return name
 }
 
-const CONTENT_EXTENSIONS = new Set([
-  ".md", ".tex",
-  ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp", ".ico",
-  ".mp4", ".webm", ".mov", ".avi", ".mkv", ".ogv",
-])
-
-function isContentFile(name: string): boolean {
-  const dot = name.lastIndexOf(".")
-  return dot >= 0 && CONTENT_EXTENSIONS.has(name.slice(dot).toLowerCase())
-}
-
 function visibleChildren(children: DocNode[] | undefined, showAll: boolean, orderOverride?: string[]): DocNode[] {
   if (!children) return []
   const filtered = children.filter((child) => {
     if (showAll) return true
-    if (child.type === "directory") return true
-    return isContentFile(child.name)
+    // Content mode: show everything except dot files/folders.
+    return !child.name.startsWith(".")
   })
   // If there's a local order override (optimistic reorder), apply it
   if (orderOverride && orderOverride.length > 0) {

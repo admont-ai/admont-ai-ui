@@ -178,9 +178,14 @@ export function LaTeXFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
   const { save, saving, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
   const { models, modelsLoading, selectedModel, setSelectedModel } = useAiLog()
 
-  // Initialize editor content when entering edit mode or when content loads
+  // Initialize editor content when entering edit mode or when content loads.
+  // The first load also syncs in edit mode — a freshly created file mounts
+  // directly in edit mode and would otherwise show an empty editor.
+  const codeInitializedRef = useRef(false)
   useEffect(() => {
-    if (content !== null && !editing) {
+    if (content === null) return
+    if (!editing || !codeInitializedRef.current) {
+      codeInitializedRef.current = true
       setCode(content)
       setDebouncedCode(content)
     }

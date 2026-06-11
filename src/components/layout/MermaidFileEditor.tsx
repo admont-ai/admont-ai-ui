@@ -52,9 +52,14 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
   const { content, lastModified, isDraft, draftUpdatedAt, refetch } = useDocumentContent(repoSlug, filePath)
   const { save, saving, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
 
-  // Initialize code from content
+  // Initialize code from content. The first load also syncs in edit mode —
+  // a freshly created file mounts directly in edit mode and would otherwise
+  // show an empty editor until a reload.
+  const codeInitializedRef = useRef(false)
   useEffect(() => {
-    if (content !== null && !editing) {
+    if (content === null) return
+    if (!editing || !codeInitializedRef.current) {
+      codeInitializedRef.current = true
       setCode(content)
       const detection = detectDiagramType(content)
       if (detection.isVisual) {

@@ -40,6 +40,8 @@ import {
   activeEditor$,
   linkDialogState$,
   useEditorSearch,
+  useCodeBlockEditorContext,
+  type CodeBlockEditorDescriptor,
 } from "@mdxeditor/editor"
 import { $getSelection, $setSelection, $getNodeByKey, $isRangeSelection, $createTextNode, $insertNodes, $isTextNode } from "lexical"
 import type { BaseSelection, LexicalEditor } from "lexical"
@@ -65,6 +67,30 @@ if (!document.head.querySelector("[data-mdx-search-highlight]")) {
   document.head.appendChild(searchHighlightCSS)
 }
 import { SpellCheckPlugin } from "./SpellCheckPlugin"
+
+// Fallback editor for code blocks whose language is not in the CodeMirror
+// language map. Without it, MDXEditor fails to parse the entire document
+// ("Parsing of the following markdown structure failed: {type: code}").
+const fallbackCodeBlockDescriptor: CodeBlockEditorDescriptor = {
+  match: () => true,
+  priority: -10,
+  Editor: (props) => {
+    const cb = useCodeBlockEditorContext()
+    return (
+      <div onKeyDown={(e) => e.nativeEvent.stopImmediatePropagation()} className="my-2 rounded-md border bg-muted/30">
+        {props.language && (
+          <div className="border-b px-3 py-1 font-mono text-xs text-muted-foreground">{props.language}</div>
+        )}
+        <textarea
+          defaultValue={props.code}
+          onChange={(e) => cb.setCode(e.target.value)}
+          rows={Math.min(20, props.code.split("\n").length + 1)}
+          className="w-full resize-y bg-transparent px-3 py-2 font-mono text-sm focus:outline-none"
+        />
+      </div>
+    )
+  },
+}
 
 // Patch LinkNode.sanitizeUrl to preserve relative wiki paths.
 // Lexical's default formatUrl() prepends "https://" to URLs like
@@ -778,26 +804,56 @@ export const MarkdownEditor = forwardRef<
                 },
               }),
               imagePlugin({ imageUploadHandler, imagePreviewHandler, ImageDialog: ImageDialogWithDiagramEditors }),
-              codeBlockPlugin({ defaultCodeBlockLanguage: "" }),
+              codeBlockPlugin({
+                defaultCodeBlockLanguage: "",
+                codeBlockEditorDescriptors: [fallbackCodeBlockDescriptor],
+              }),
               codeMirrorPlugin({
                 codeBlockLanguages: {
                   "": "Plain text",
+                  text: "Plain text",
+                  plaintext: "Plain text",
                   js: "JavaScript",
+                  javascript: "JavaScript",
                   ts: "TypeScript",
+                  typescript: "TypeScript",
                   tsx: "TypeScript (React)",
                   jsx: "JavaScript (React)",
                   css: "CSS",
                   html: "HTML",
+                  xml: "XML",
                   json: "JSON",
                   python: "Python",
+                  py: "Python",
                   bash: "Bash",
                   sh: "Shell",
+                  shell: "Shell",
+                  powershell: "PowerShell",
                   sql: "SQL",
                   yaml: "YAML",
+                  yml: "YAML",
+                  toml: "TOML",
                   markdown: "Markdown",
+                  md: "Markdown",
                   go: "Go",
+                  golang: "Go",
                   rust: "Rust",
                   java: "Java",
+                  kotlin: "Kotlin",
+                  swift: "Swift",
+                  c: "C",
+                  cpp: "C++",
+                  csharp: "C#",
+                  php: "PHP",
+                  ruby: "Ruby",
+                  dockerfile: "Dockerfile",
+                  diff: "Diff",
+                  latex: "LaTeX",
+                  tex: "LaTeX",
+                  lua: "Lua",
+                  perl: "Perl",
+                  r: "R",
+                  dart: "Dart",
                 },
               }),
               diffSourcePlugin({

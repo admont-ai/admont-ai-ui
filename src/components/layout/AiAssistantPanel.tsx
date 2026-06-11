@@ -2,6 +2,7 @@ import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
 import { ArrowUp, BookOpenText, ChevronDown, FileText, Library, Loader2, MessageSquarePlus, MessageSquareText, Sparkles, Trash2, X } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { toast } from "sonner"
 
 import { authFetch } from "@/lib/auth-fetch"
 import { useAiLog } from "@/hooks/use-ai-log"
@@ -41,6 +42,7 @@ interface AiAssistantPanelProps {
   filePath: string
   onClose: () => void
   onNavigate?: (repoSlug: string, filePath: string) => void
+  onFilesChanged?: (paths: string[]) => void
 }
 
 /** Diagram file type of the current file, or null for text/markdown files. */
@@ -94,6 +96,7 @@ export function AiAssistantPanel({
   filePath,
   onClose,
   onNavigate,
+  onFilesChanged,
 }: AiAssistantPanelProps) {
   const {
     selectedModel,
@@ -102,6 +105,7 @@ export function AiAssistantPanel({
     addMessage, refreshConversations,
   } = useAiLog()
   const { user } = useAuth()
+  const [mode, setMode] = useState<"ask" | "edit">("ask")
   const [scope, setScope] = useState<Scope>("all")
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -227,8 +231,76 @@ export function AiAssistantPanel({
     }
   }, [loading, repos, repoSlug, scope, selectedModel, activeConversationId, activeMessages, createConversation, addMessage, refreshConversations, filePath])
 
+  // Agentic edit mode: the backend runs a tool loop that can create and
+  // update files in the current repo.
+  const sendAgentRequest = useCallback(async (query: string) => {
+    if (loading || !query.trim() || !repoSlug) return
+    setLoading(true)
+    setStreamingResponse("")
+    try {
+      let convId = activeConversationId
+      if (!convId) {
+        convId = await createConversation("repo", repoSlug, filePath)
+      }
+
+      const history = activeMessages.map((m) => ({
+        role: m.role === "summary" ? "user" : m.role,
+        content: m.content,
+      }))
+
+      addMessage({
+        id: `temp-${Date.now()}`,
+        conversation_id: convId,
+        role: "user",
+        content: query,
+        created_at: new Date().toISOString(),
+      })
+
+      const res = await authFetch(`/repos/${encodeURIComponent(repoSlug)}/agent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          model: selectedModel || undefined,
+          conversation_id: convId,
+          history: history.length > 0 ? history : undefined,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.detail ?? data.error ?? "Agent request failed")
+        return
+      }
+
+      addMessage({
+        id: data.message_id || `temp-${Date.now()}-reply`,
+        conversation_id: convId,
+        role: "assistant",
+        content: data.answer ?? "",
+        actions: data.actions ?? [],
+        token_usage: data.usage,
+        created_at: new Date().toISOString(),
+      })
+      refreshConversations()
+      setInput("")
+
+      const changed = ((data.actions ?? []) as { path?: string; status: string }[])
+        .filter((a) => a.status === "ok" && a.path)
+        .map((a) => a.path as string)
+      if (changed.length > 0) onFilesChanged?.(changed)
+    } catch {
+      // network errors handled by authFetch
+    } finally {
+      setLoading(false)
+    }
+  }, [loading, repoSlug, filePath, activeConversationId, activeMessages, selectedModel, createConversation, addMessage, refreshConversations, onFilesChanged])
+
   const handleSubmit = useCallback(async (overrideInput?: string) => {
     const text = overrideInput ?? input
+    if (mode === "edit") {
+      await sendAgentRequest(text)
+      return
+    }
     const pageContent = usesSourceHandle(filePath)
       ? diagramRef?.current?.getSource() ?? ""
       : editorRef.current?.getMarkdown() ?? ""
@@ -241,7 +313,7 @@ export function AiAssistantPanel({
       context = `[Current page: ${filePath}]\n${pageContent}`
     }
     await sendRagSearch(text, context)
-  }, [scope, input, liveSelection, filePath, editorRef, diagramRef, sendRagSearch])
+  }, [mode, scope, input, liveSelection, filePath, editorRef, diagramRef, sendRagSearch, sendAgentRequest])
 
   const handleSuggestionClick = useCallback((text: string) => {
     setInput(text)
@@ -361,7 +433,7 @@ export function AiAssistantPanel({
               <div className="px-4 py-3">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  Thinking…
+                  {mode === "edit" ? "Working…" : "Thinking…"}
                 </div>
               </div>
             )}
@@ -379,7 +451,26 @@ export function AiAssistantPanel({
 
       {/* Bottom input area */}
       <div className="border-t bg-muted/30 px-3 py-3">
-        {hasSelection && !loading && !diagramType && (
+        {repoSlug && (
+          <div className="flex gap-1 mb-2">
+            {(["ask", "edit"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={
+                  "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors " +
+                  (mode === m
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                {m === "ask" ? "Ask" : "Edit"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {hasSelection && !loading && !diagramType && mode === "ask" && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {READ_TOOLS.map((tool) => (
               <button
@@ -399,7 +490,7 @@ export function AiAssistantPanel({
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question…"
+            placeholder={mode === "edit" ? "Describe what to create or change…" : "Ask a question…"}
             rows={2}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -411,7 +502,7 @@ export function AiAssistantPanel({
           />
           <div className="flex items-center justify-between px-2.5 pb-2">
             <div className="flex items-center gap-0.5 min-w-0">
-              {repos.some((r) => r.search_provider) && (
+              {mode === "ask" && repos.some((r) => r.search_provider) && (
                 <Select value={scope} onValueChange={(v) => setScope(v as Scope)}>
                   <SelectTrigger
                     size="sm"
@@ -485,6 +576,22 @@ function ChatMessage({ message, onNavigate }: { message: AiMessage; onNavigate?:
       <div className="prose prose-sm dark:prose-invert max-w-none">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
       </div>
+      {message.actions && message.actions.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {message.actions.map((a, i) => (
+            <span
+              key={i}
+              title={a.status !== "ok" ? a.status : undefined}
+              className={
+                "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] " +
+                (a.status === "ok" ? "text-foreground" : "text-destructive")
+              }
+            >
+              {a.status === "ok" ? "✓" : "✗"} {a.tool === "create_file" ? "Created" : "Updated"} {a.path}
+            </span>
+          ))}
+        </div>
+      )}
       {message.sources && message.sources.length > 0 && (
         <div className="mt-3 space-y-1">
           <div className="text-xs font-medium text-muted-foreground mb-1">Sources</div>

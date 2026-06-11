@@ -176,6 +176,15 @@ export function AppLayout() {
   const canEdit = hasPermission(filePermission, "contributor")
   const canDeleteFile = hasPermission(filePermission, "content_manager")
 
+  // The agentic assistant created/updated files: refresh the tree and the
+  // open document if it was touched.
+  const handleAgentFilesChanged = useCallback((paths: string[]) => {
+    setSidebarRefreshKey((k) => k + 1)
+    if (selectedFilePath && paths.includes(selectedFilePath)) {
+      refetch()
+    }
+  }, [selectedFilePath, refetch])
+
   const { save, saving, publish, publishing, deleteDraft } = useDocumentSave(
     selectedRepoSlug,
     selectedFilePath
@@ -641,6 +650,7 @@ export function AppLayout() {
                         filePath={selectedFilePath}
                         onClose={() => setAiPanelOpen(false)}
                         onNavigate={handleSearchSelect}
+                        onFilesChanged={handleAgentFilesChanged}
                       />
                     </ResizablePanel>
                   </>

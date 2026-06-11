@@ -45,8 +45,16 @@ export interface AiMessage {
   role: "user" | "assistant" | "summary"
   content: string
   sources?: AiMessageSource[]
+  actions?: AiAgentAction[]
   token_usage?: { input_tokens: number; output_tokens: number }
   created_at: string
+}
+
+/** A file operation performed by the agentic assistant. */
+export interface AiAgentAction {
+  tool: string
+  path?: string
+  status: string
 }
 
 export interface AiMessageSource {

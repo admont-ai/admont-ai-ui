@@ -2504,6 +2504,7 @@ interface LlmTokenLimits {
   generate: number
   summarize: number
   edit: number
+  agent: number
 }
 
 interface LlmModelEntry {
@@ -2552,7 +2553,7 @@ function LlmProvidersTab() {
   const [showNewKey, setShowNewKey] = useState(false)
 
   // Token limits state (per-action output limits; "" = provider ceiling)
-  const [tokenLimits, setTokenLimits] = useState<Record<string, string>>({ ask: "", generate: "", summarize: "", edit: "" })
+  const [tokenLimits, setTokenLimits] = useState<Record<string, string>>({ ask: "", generate: "", summarize: "", edit: "", agent: "" })
   const [savingLimits, setSavingLimits] = useState(false)
 
   const fetchData = useCallback(async () => {
@@ -2570,6 +2571,7 @@ function LlmProvidersTab() {
           generate: data.generate ? String(data.generate) : "",
           summarize: data.summarize ? String(data.summarize) : "",
           edit: data.edit ? String(data.edit) : "",
+          agent: data.agent ? String(data.agent) : "",
         })
       }
       if (provRes.ok) {
@@ -2658,6 +2660,7 @@ function LlmProvidersTab() {
         generate: Number(tokenLimits.generate) || 0,
         summarize: Number(tokenLimits.summarize) || 0,
         edit: Number(tokenLimits.edit) || 0,
+        agent: Number(tokenLimits.agent) || 0,
       }
       const res = await authFetch("/admin/llm/token-limits", {
         method: "PUT",
@@ -2910,7 +2913,7 @@ function LlmProvidersTab() {
         <p className="text-xs text-muted-foreground">
           Output token limits per request type. Each request is additionally capped by the provider&apos;s max tokens. Empty = provider ceiling.
         </p>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           <LabeledField label="Ask / Chat">
             <input type="number" min="0" value={tokenLimits.ask} onChange={(e) => setTokenLimits((p) => ({ ...p, ask: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
           </LabeledField>
@@ -2922,6 +2925,9 @@ function LlmProvidersTab() {
           </LabeledField>
           <LabeledField label="Edit actions">
             <input type="number" min="0" value={tokenLimits.edit} onChange={(e) => setTokenLimits((p) => ({ ...p, edit: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Agent">
+            <input type="number" min="0" value={tokenLimits.agent} onChange={(e) => setTokenLimits((p) => ({ ...p, agent: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
           </LabeledField>
         </div>
         <Button size="sm" onClick={handleSaveLimits} disabled={savingLimits}>

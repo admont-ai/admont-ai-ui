@@ -8,6 +8,11 @@ import { EditorHeader } from "./EditorHeader"
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
+// Quartz theme with alternating row shading, tinted from the app's muted color.
+const gridTheme = themeQuartz.withParams({
+  oddRowBackgroundColor: "color-mix(in srgb, var(--muted) 50%, transparent)",
+})
+
 interface SpreadsheetViewerProps {
   repoSlug: string
   filePath: string
@@ -126,7 +131,7 @@ export function SpreadsheetViewer({ repoSlug, filePath, onRename, onDelete }: Sp
         ) : (
           <AgGridReact
             key={`${filePath}-${activeSheet}`}
-            theme={themeQuartz}
+            theme={gridTheme}
             columnDefs={columnDefs}
             rowData={rowData}
             defaultColDef={defaultColDef}

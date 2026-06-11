@@ -539,17 +539,26 @@ export const MarkdownEditor = forwardRef<
 
   const imagePreviewHandler = useCallback(
     async (src: string): Promise<string> => {
+      // External images load directly in the browser — never send them
+      // through authFetch (it attaches the auth token to the request).
+      if (/^https?:\/\//i.test(src) || src.startsWith("data:")) {
+        return src
+      }
       let url: string
-      if (src.startsWith("http") || src.startsWith("/")) {
+      if (src.startsWith("/")) {
         url = src
       } else {
         const cleanSrc = src.startsWith("./") ? src.slice(2) : src
         url = `/repos/${encodeURIComponent(repoSlug)}/file/${dir}${cleanSrc}`
       }
-      const res = await authFetch(url)
-      if (!res.ok) return src
-      const blob = await res.blob()
-      return URL.createObjectURL(blob)
+      try {
+        const res = await authFetch(url)
+        if (!res.ok) return src
+        const blob = await res.blob()
+        return URL.createObjectURL(blob)
+      } catch {
+        return src
+      }
     },
     [repoSlug, dir],
   )

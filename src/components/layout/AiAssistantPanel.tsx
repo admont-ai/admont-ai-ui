@@ -343,7 +343,7 @@ export function AiAssistantPanel({
     await deleteConversation(id)
   }, [deleteConversation])
 
-  const canSubmit = mode === "polish" ? hasSelection : input.trim().length > 0
+  const canSubmit = mode === "polish" && !diagramType ? hasSelection : input.trim().length > 0
   const firstName = user?.name?.split(" ")[0] ?? ""
   const activeConv = conversations.find((c) => c.id === activeConversationId)
 

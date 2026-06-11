@@ -88,6 +88,10 @@ export function NewDocumentDialog({
           return
         }
         content = data.content ?? data.answer ?? ""
+        if (!content.trim()) {
+          toast.error("AI generation returned no content — the file was not created.")
+          return
+        }
         addEntry({
           action: "generate",
           input: aiPrompt,

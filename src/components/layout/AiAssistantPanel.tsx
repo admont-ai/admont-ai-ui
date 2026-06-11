@@ -1,5 +1,5 @@
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
-import { ArrowUp, BookOpenText, ChevronDown, FileText, Library, Loader2, MessageSquarePlus, MessageSquareText, Pencil, Scissors, Sparkles, SpellCheck, Trash2, X } from "lucide-react"
+import { ArrowUp, BookOpenText, ChevronDown, Cpu, FileText, Library, Loader2, MessageSquarePlus, MessageSquareText, Pencil, Scissors, Sparkles, SpellCheck, Trash2, X } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -500,14 +500,15 @@ export function AiAssistantPanel({
                 </Select>
               )}
               {modelsLoading ? (
-                <div className="h-6 w-24 animate-pulse rounded bg-muted" />
+                <div className="size-7 animate-pulse rounded bg-muted" />
               ) : (
                 <Select value={selectedModel} onValueChange={setSelectedModel}>
                   <SelectTrigger
                     size="sm"
-                    className="h-7 gap-1 border-0 bg-transparent px-1.5 text-xs text-muted-foreground shadow-none hover:text-foreground [&>svg]:size-3"
+                    title={models.find((m) => m.id === selectedModel)?.name ?? "Select model"}
+                    className="h-7 w-7 justify-center gap-0 border-0 bg-transparent px-0 text-muted-foreground shadow-none hover:text-foreground [&>svg:last-child]:hidden"
                   >
-                    <SelectValue placeholder="Model" />
+                    <Cpu className="size-3.5" />
                   </SelectTrigger>
                   <SelectContent position="popper" side="top" align="start">
                     {hasMultipleProviders ? (

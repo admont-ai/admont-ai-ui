@@ -65,8 +65,11 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     }
   }, [content, editing])
 
+  // Only react to editSignal increments after mount (see DrawioFileEditor).
+  const lastEditSignal = useRef(editSignal)
   useEffect(() => {
-    if (editSignal && canEdit) setEditing(true)
+    if (editSignal !== lastEditSignal.current && canEdit) setEditing(true)
+    lastEditSignal.current = editSignal
   }, [editSignal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const buildUploadUrl = useCallback(

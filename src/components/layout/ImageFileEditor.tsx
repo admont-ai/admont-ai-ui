@@ -118,8 +118,11 @@ export function ImageFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
     }
   }, [fetchImage])
 
+  // Only react to editSignal increments after mount (see DrawioFileEditor).
+  const lastEditSignal = useRef(editSignal)
   useEffect(() => {
-    if (editSignal && canEdit && !isSvg(filePath)) setEditing(true)
+    if (editSignal !== lastEditSignal.current && canEdit && !isSvg(filePath)) setEditing(true)
+    lastEditSignal.current = editSignal
   }, [editSignal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialise/destroy TUI Image Editor when entering/leaving edit mode

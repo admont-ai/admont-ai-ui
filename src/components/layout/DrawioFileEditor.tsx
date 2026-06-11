@@ -44,15 +44,22 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
   const { content, lastModified, isDraft, draftUpdatedAt, refetch } = useDocumentContent(repoSlug, filePath)
   const { save, saving, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
 
-  // Keep xmlRef in sync with loaded content
+  // Keep xmlRef in sync with loaded content. Also fill it while editing as
+  // long as it's still empty — when edit mode starts at mount, the content
+  // arrives after editing is already true and the editor would load empty.
   useEffect(() => {
-    if (content !== null && !editing) {
+    if (content !== null && (!editing || xmlRef.current === "")) {
       xmlRef.current = content
     }
   }, [content, editing])
 
+  // editSignal is a monotonically increasing counter owned by AppLayout; a
+  // freshly mounted editor must only react to increments after mount, not to
+  // the value left over from a double-click on a previous file.
+  const lastEditSignal = useRef(editSignal)
   useEffect(() => {
-    if (editSignal && canEdit) setEditing(true)
+    if (editSignal !== lastEditSignal.current && canEdit) setEditing(true)
+    lastEditSignal.current = editSignal
   }, [editSignal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const buildUploadUrl = useCallback(

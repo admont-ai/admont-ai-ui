@@ -8,9 +8,11 @@ import { EditorHeader } from "./EditorHeader"
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
-// Quartz theme with alternating row shading, tinted from the app's muted color.
+// Quartz theme with alternating row shading (tinted from the app's muted
+// color) and compact spacing for denser rows.
 const gridTheme = themeQuartz.withParams({
   oddRowBackgroundColor: "color-mix(in srgb, var(--muted) 50%, transparent)",
+  spacing: 4,
 })
 
 interface SpreadsheetViewerProps {

@@ -488,6 +488,7 @@ export function AppLayout() {
                         key={selectedFilePath}
                         repoSlug={selectedRepoSlug}
                         filePath={selectedFilePath}
+                        handleRef={diagramRef}
                         onRename={canEdit ? () => setRenamingFile(true) : undefined}
                         onDelete={canDeleteFile ? handleDeleteFile : undefined}
                       />

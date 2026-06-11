@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react"
+import { type RefObject, useEffect, useImperativeHandle, useMemo, useState } from "react"
 import * as XLSX from "xlsx"
 import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef } from "ag-grid-community"
 import { AgGridReact } from "ag-grid-react"
 
 import { authFetch } from "@/lib/auth-fetch"
+import type { DiagramSourceHandle } from "@/types"
 import { EditorHeader } from "./EditorHeader"
 
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -18,9 +19,14 @@ const gridTheme = themeQuartz.withParams({
 interface SpreadsheetViewerProps {
   repoSlug: string
   filePath: string
+  handleRef?: RefObject<DiagramSourceHandle | null>
   onRename?: () => void
   onDelete?: () => void
 }
+
+// Caps for the AI page context built from the active sheet.
+const MAX_CONTEXT_ROWS = 300
+const MAX_CONTEXT_CHARS = 20_000
 
 type CellValue = string | number | boolean | null
 
@@ -30,7 +36,7 @@ type SheetData = {
 }
 
 /** Read-only table viewer for .xlsx and .csv files with sorting & filtering. */
-export function SpreadsheetViewer({ repoSlug, filePath, onRename, onDelete }: SpreadsheetViewerProps) {
+export function SpreadsheetViewer({ repoSlug, filePath, handleRef, onRename, onDelete }: SpreadsheetViewerProps) {
   const [sheets, setSheets] = useState<SheetData[] | null>(null)
   const [activeSheet, setActiveSheet] = useState(0)
   const [error, setError] = useState("")
@@ -88,6 +94,41 @@ export function SpreadsheetViewer({ repoSlug, filePath, onRename, onDelete }: Sp
 
     return { columnDefs, rowData }
   }, [sheet])
+
+  // Expose the active sheet as text so the AI assistant can analyze it as
+  // page context. The viewer is read-only, so setSource is a no-op.
+  useImperativeHandle(handleRef, () => ({
+    getSource: () => {
+      if (!sheets || !sheet) return ""
+      const fileName = filePath.split("/").pop() ?? filePath
+      const allRows = sheet.rows
+      const dataRowCount = Math.max(allRows.length - 1, 0)
+
+      const lines: string[] = [
+        `Spreadsheet "${fileName}" — sheet "${sheet.name}" (${dataRowCount} data rows)`,
+      ]
+      const others = sheets.filter((_, i) => i !== activeSheet).map((s) => s.name)
+      if (others.length > 0) {
+        lines.push(`Other sheets (not included): ${others.join(", ")}`)
+      }
+
+      let chars = lines.join("\n").length
+      let included = 0
+      for (let i = 0; i < allRows.length && included < MAX_CONTEXT_ROWS + 1; i++) {
+        const line = allRows[i].map((c) => (c == null ? "" : String(c))).join(" | ")
+        if (chars + line.length > MAX_CONTEXT_CHARS) break
+        lines.push(line)
+        chars += line.length + 1
+        included++
+      }
+      const includedDataRows = Math.max(included - 1, 0)
+      if (includedDataRows < dataRowCount) {
+        lines.push(`… (truncated, ${dataRowCount - includedDataRows} more rows)`)
+      }
+      return lines.join("\n")
+    },
+    setSource: () => {},
+  }), [sheets, sheet, activeSheet, filePath])
 
   const defaultColDef = useMemo<ColDef>(() => ({
     sortable: true,

@@ -51,6 +51,13 @@ function diagramTypeOf(filePath: string): "mermaid" | "drawio" | null {
   return null
 }
 
+/** Whether the current file exposes its page content via the source handle
+ * (diagrams and spreadsheets) instead of the markdown editor. */
+function usesSourceHandle(filePath: string): boolean {
+  const lower = filePath.toLowerCase()
+  return diagramTypeOf(filePath) !== null || lower.endsWith(".xlsx") || lower.endsWith(".csv")
+}
+
 function formatTime(date: Date | string) {
   const d = typeof date === "string" ? new Date(date) : date
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -222,7 +229,7 @@ export function AiAssistantPanel({
 
   const handleSubmit = useCallback(async (overrideInput?: string) => {
     const text = overrideInput ?? input
-    const pageContent = diagramType
+    const pageContent = usesSourceHandle(filePath)
       ? diagramRef?.current?.getSource() ?? ""
       : editorRef.current?.getMarkdown() ?? ""
     let context: string | undefined
@@ -234,7 +241,7 @@ export function AiAssistantPanel({
       context = `[Current page: ${filePath}]\n${pageContent}`
     }
     await sendRagSearch(text, context)
-  }, [scope, input, liveSelection, filePath, editorRef, diagramRef, diagramType, sendRagSearch])
+  }, [scope, input, liveSelection, filePath, editorRef, diagramRef, sendRagSearch])
 
   const handleSuggestionClick = useCallback((text: string) => {
     setInput(text)

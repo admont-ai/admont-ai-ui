@@ -1,5 +1,5 @@
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
-import { ArrowUp, BookOpenText, ChevronDown, Cpu, FileText, Library, Loader2, MessageSquarePlus, MessageSquareText, Sparkles, Trash2, X } from "lucide-react"
+import { ArrowUp, BookOpenText, ChevronDown, FileText, Library, Loader2, MessageSquarePlus, MessageSquareText, Sparkles, Trash2, X } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -17,9 +17,7 @@ import {
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -91,7 +89,7 @@ export function AiAssistantPanel({
   onNavigate,
 }: AiAssistantPanelProps) {
   const {
-    models, modelsLoading, selectedModel, setSelectedModel,
+    selectedModel,
     conversations, activeConversationId, activeMessages,
     createConversation, switchConversation, deleteConversation,
     addMessage, refreshConversations,
@@ -125,14 +123,6 @@ export function AiAssistantPanel({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [activeMessages.length, streamingResponse])
-
-  const modelsByProvider = models.reduce<Record<string, typeof models>>((acc, m) => {
-    const p = m.provider || "other"
-    ;(acc[p] ??= []).push(m)
-    return acc
-  }, {})
-  const providers = Object.keys(modelsByProvider).sort()
-  const hasMultipleProviders = providers.length > 1
 
   // Read-only LLM request whose result is shown in the panel (Summarize tool).
   const sendRequest = useCallback(async (requestBody: Record<string, unknown>) => {
@@ -435,44 +425,13 @@ export function AiAssistantPanel({
                 </Select>
               )}
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {modelsLoading ? (
-                <div className="size-7 animate-pulse rounded bg-muted" />
-              ) : (
-                <Select value={selectedModel} onValueChange={setSelectedModel}>
-                  <SelectTrigger
-                    size="sm"
-                    title={models.find((m) => m.id === selectedModel)?.name ?? "Select model"}
-                    className="h-7 w-7 justify-center gap-0 border-0 bg-transparent px-0 text-muted-foreground shadow-none hover:text-foreground [&>svg:last-child]:hidden"
-                  >
-                    <Cpu className="size-3.5" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" side="top" align="end">
-                    {hasMultipleProviders ? (
-                      providers.map((p) => (
-                        <SelectGroup key={p}>
-                          <SelectLabel className="capitalize">{p}</SelectLabel>
-                          {modelsByProvider[p].map((m) => (
-                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                          ))}
-                        </SelectGroup>
-                      ))
-                    ) : (
-                      models.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
-              <button
-                onClick={() => handleSubmit()}
-                disabled={!canSubmit || loading}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-30"
-              >
-                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
-              </button>
-            </div>
+            <button
+              onClick={() => handleSubmit()}
+              disabled={!canSubmit || loading}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-30"
+            >
+              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
+            </button>
           </div>
         </div>
       </div>

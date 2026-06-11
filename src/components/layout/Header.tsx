@@ -1,6 +1,6 @@
 import type { RefObject } from "react"
 import type { PanelImperativeHandle } from "react-resizable-panels"
-import { Check, ClipboardCopy, Loader2, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Settings, Shield, ShieldCheck, ShieldOff, Sparkles } from "lucide-react"
+import { Check, ClipboardCopy, Cpu, Loader2, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Settings, Shield, ShieldCheck, ShieldOff, Sparkles } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+} from "@/components/ui/select"
 import { ProviderIcon, formatProviderName } from "@/components/ui/provider-icon"
+import { useAiLog } from "@/hooks/use-ai-log"
 import { useAuth } from "@/contexts/auth-context"
 import { authFetch } from "@/lib/auth-fetch"
 import type { Repo } from "@/types"
@@ -42,6 +51,15 @@ export function Header({
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [totpDialogOpen, setTotpDialogOpen] = useState(false)
   const { user, permissions, logout } = useAuth()
+  const { models, selectedModel, setSelectedModel } = useAiLog()
+
+  const modelsByProvider = models.reduce<Record<string, typeof models>>((acc, m) => {
+    const p = m.provider || "other"
+    ;(acc[p] ??= []).push(m)
+    return acc
+  }, {})
+  const modelProviders = Object.keys(modelsByProvider).sort()
+  const selectedModelName = models.find((m) => m.id === selectedModel)?.name
 
   function toggleSidebar() {
     const panel = sidebarRef.current
@@ -75,6 +93,34 @@ export function Header({
         <SearchBar repos={repos} selectedRepo={selectedRepo} onSelect={onSearchSelect} />
       )}
       <div className="ml-auto flex items-center gap-2">
+        {user && models.length > 0 && (
+          <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <SelectTrigger
+              size="sm"
+              title="AI model"
+              className="h-8 max-w-52 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Cpu className="size-3.5 shrink-0" />
+              <span className="truncate">{selectedModelName ?? "Select model"}</span>
+            </SelectTrigger>
+            <SelectContent align="end">
+              {modelProviders.length > 1 ? (
+                modelProviders.map((p) => (
+                  <SelectGroup key={p}>
+                    <SelectLabel className="capitalize">{p}</SelectLabel>
+                    {modelsByProvider[p].map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))
+              ) : (
+                models.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        )}
         {user && onAiAssistant && (
           <Button
             variant="ghost"

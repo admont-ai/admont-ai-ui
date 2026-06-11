@@ -30,6 +30,7 @@ import { ImageFileEditor } from "./ImageFileEditor"
 import { LoginPanel } from "@/components/auth/LoginPanel"
 import { AiAssistantPanel } from "./AiAssistantPanel"
 import { AiEditBox } from "./AiEditBox"
+import { SpreadsheetViewer } from "./SpreadsheetViewer"
 import { ConfluenceImportDialog } from "./ConfluenceImportDialog"
 import { DrawioFileEditor } from "./DrawioFileEditor"
 import { LaTeXFileEditor } from "./LaTeXFileEditor"
@@ -55,6 +56,11 @@ function isImageFile(path: string): boolean {
 
 function isDrawioFile(path: string): boolean {
   return path.toLowerCase().endsWith(".drawio")
+}
+
+function isSpreadsheetFile(path: string): boolean {
+  const lower = path.toLowerCase()
+  return lower.endsWith(".xlsx") || lower.endsWith(".csv")
 }
 
 function isMermaidFile(path: string): boolean {
@@ -474,6 +480,14 @@ export function AppLayout() {
                         canEdit={canEdit}
                         initialEditing={editOnLoad}
                         editSignal={editSignal}
+                        onRename={canEdit ? () => setRenamingFile(true) : undefined}
+                        onDelete={canDeleteFile ? handleDeleteFile : undefined}
+                      />
+                    ) : selectedFilePath && isSpreadsheetFile(selectedFilePath) ? (
+                      <SpreadsheetViewer
+                        key={selectedFilePath}
+                        repoSlug={selectedRepoSlug}
+                        filePath={selectedFilePath}
                         onRename={canEdit ? () => setRenamingFile(true) : undefined}
                         onDelete={canDeleteFile ? handleDeleteFile : undefined}
                       />

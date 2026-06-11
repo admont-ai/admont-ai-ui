@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 import { authFetch } from "@/lib/auth-fetch"
 import { useAiLog } from "@/hooks/use-ai-log"
@@ -80,16 +81,19 @@ export function NewDocumentDialog({
             model: selectedModel || undefined,
           }),
         })
-        if (res.ok) {
-          const data = await res.json()
-          content = data.content ?? data.answer ?? ""
-          addEntry({
-            action: "generate",
-            input: aiPrompt,
-            summary: data.summary ?? content.slice(0, 200),
-            usage: data.usage,
-          })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          // Keep the dialog open and don't create an empty file.
+          toast.error(data.detail ?? data.error ?? "AI generation failed")
+          return
         }
+        content = data.content ?? data.answer ?? ""
+        addEntry({
+          action: "generate",
+          input: aiPrompt,
+          summary: data.summary ?? content.slice(0, 200),
+          usage: data.usage,
+        })
       }
 
       const fullFilename = fileType.extension ? trimmed + fileType.extension : trimmed

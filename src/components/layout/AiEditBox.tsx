@@ -109,7 +109,17 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
 
     if (isDiagram) {
       const source = getDiagramSource?.() ?? ""
-      if (!source) return
+      if (!source.trim()) {
+        // Empty diagram — generate a new one from the prompt.
+        await runRequest(
+          { action: "generate", prompt: text, file_type: fileType },
+          (result, data) => {
+            onDiagramResult?.(result)
+            addEntry({ action: "generate", input: text, summary: (data.summary as string) ?? "", usage: data.usage as never })
+          },
+        )
+        return
+      }
       await runRequest(
         { action: "polish", content: source, instructions: text, file_type: fileType },
         (result, data) => {

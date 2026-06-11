@@ -2492,6 +2492,8 @@ interface LlmProviderEntry {
   api_key?: string
   base_url?: string
   model?: string
+  default_model?: string
+  favourite_models?: string[]
   source?: string
   [key: string]: unknown
 }
@@ -2530,6 +2532,9 @@ function LlmProvidersTab() {
   const [editFields, setEditFields] = useState<Record<string, string>>({})
   const [editOriginalKey, setEditOriginalKey] = useState("")
   const [savingEdit, setSavingEdit] = useState(false)
+  const [editFavourites, setEditFavourites] = useState<string[]>([])
+  const [editModels, setEditModels] = useState<LlmModelEntry[]>([])
+  const [editModelsLoading, setEditModelsLoading] = useState(false)
 
   // Add form state
   const [newProvider, setNewProvider] = useState("")
@@ -2596,7 +2601,7 @@ function LlmProvidersTab() {
     const fields: Record<string, string> = {
       api_key: apiKey,
       base_url: (p.base_url as string) ?? "",
-      model: (p.model as string) ?? "",
+      model: p.default_model ?? (p.model as string) ?? "",
     }
     for (const f of getSupportedFields(p.provider_type)) {
       if (!(f.key in fields)) {
@@ -2604,6 +2609,22 @@ function LlmProvidersTab() {
       }
     }
     setEditFields(fields)
+    setEditFavourites(p.favourite_models ?? [])
+
+    // Load the provider's live model list for the favourites picker.
+    setEditModels([])
+    setEditModelsLoading(true)
+    authFetch(`/admin/llm/${encodeURIComponent(p.name)}/models`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: LlmModelEntry[]) => setEditModels(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setEditModelsLoading(false))
+  }
+
+  function toggleFavourite(id: string) {
+    setEditFavourites((prev) =>
+      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id],
+    )
   }
 
   async function handleUpdate(name: string) {
@@ -2614,9 +2635,11 @@ function LlmProvidersTab() {
         if (k === "api_key") {
           if (v !== editOriginalKey && v.trim()) body[k] = v.trim()
         } else if (v.trim()) {
-          body[k] = v.trim()
+          body[k === "model" ? "default_model" : k] = v.trim()
         }
       }
+      // Always send favourites so an empty selection clears them.
+      body.favourite_models = editFavourites
       const res = await authFetch(`/admin/llm/${encodeURIComponent(name)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -2661,7 +2684,7 @@ function LlmProvidersTab() {
     try {
       const body: Record<string, unknown> = { name: newName.trim(), provider_type: newProvider }
       for (const [k, v] of Object.entries(newFields)) {
-        if (v.trim()) body[k] = v.trim()
+        if (v.trim()) body[k === "model" ? "default_model" : k] = v.trim()
       }
       const res = await authFetch("/admin/llm", {
         method: "POST",
@@ -2858,14 +2881,14 @@ function LlmProvidersTab() {
                         <input type="text" value={editFields.base_url ?? ""} onChange={(e) => setEditField("base_url", e.target.value)} placeholder="http://localhost:11434" className={inputClass} />
                       </LabeledField>
                     )}
-                    <LabeledField label="Model">
-                      {getSupportedModels(pt).length > 0 ? (
+                    <LabeledField label="Default Model">
+                      {editModels.length > 0 ? (
                         <Select value={editFields.model ?? ""} onValueChange={(v) => setEditField("model", v)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select model (optional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            {getSupportedModels(pt).map((m) => (
+                            {editModels.map((m) => (
                               <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                             ))}
                           </SelectContent>
@@ -2885,6 +2908,44 @@ function LlmProvidersTab() {
                         />
                       </LabeledField>
                     ))}
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium">
+                      Favourite models
+                      {editFavourites.length > 0 && (
+                        <span className="text-muted-foreground font-normal"> — {editFavourites.length} selected</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Users only see favourites in the model selector. With no selection, all current models are shown.
+                    </p>
+                    {editModelsLoading ? (
+                      <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                        <Loader2 className="size-3.5 animate-spin" /> Loading models…
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
+                        {/* Keep stale favourites visible so they can be unchecked. */}
+                        {[...editModels, ...editFavourites
+                          .filter((id) => !editModels.some((m) => m.id === id))
+                          .map((id) => ({ id, name: id }))]
+                          .map((m) => (
+                            <label key={m.id} className="flex items-center gap-2 text-xs py-0.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={editFavourites.includes(m.id)}
+                                onChange={() => toggleFavourite(m.id)}
+                              />
+                              <span className="truncate" title={m.id}>{m.name}</span>
+                            </label>
+                          ))}
+                        {editModels.length === 0 && editFavourites.length === 0 && (
+                          <p className="col-span-2 text-xs text-muted-foreground py-1">
+                            No models reported by the provider yet.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => handleUpdate(p.name)} disabled={savingEdit}>
@@ -2908,7 +2969,12 @@ function LlmProvidersTab() {
                     <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
                       {p.api_key && <p>API Key: {maskSecret(p.api_key)}</p>}
                       {p.base_url && <p>Base URL: {p.base_url}</p>}
-                      {p.model && <p>Model: {p.model}</p>}
+                      {(p.default_model || p.model) && <p>Default Model: {p.default_model || p.model}</p>}
+                      <p>
+                        Favourite Models: {p.favourite_models?.length
+                          ? p.favourite_models.join(", ")
+                          : "all current models"}
+                      </p>
                       {extra.map((f) => p[f.key] ? <p key={f.key}>{f.label}: {String(p[f.key])}</p> : null)}
                     </div>
                   </div>

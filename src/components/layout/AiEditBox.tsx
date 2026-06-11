@@ -53,6 +53,23 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
     if (open) textareaRef.current?.focus()
   }, [open])
 
+  // The drawio embed iframe aggressively grabs keyboard focus (e.g. after its
+  // init/load handshake), which silently swallows typing into this box. While
+  // the box is open, pull focus back whenever it escapes into an iframe —
+  // that's exactly when the window fires "blur".
+  useEffect(() => {
+    if (!open) return
+    const reclaimFocus = () => {
+      setTimeout(() => {
+        if (document.activeElement?.tagName === "IFRAME") {
+          textareaRef.current?.focus()
+        }
+      }, 0)
+    }
+    window.addEventListener("blur", reclaimFocus)
+    return () => window.removeEventListener("blur", reclaimFocus)
+  }, [open])
+
   const runRequest = useCallback(
     async (body: Record<string, unknown>, apply: (result: string, data: Record<string, unknown>) => Promise<void> | void) => {
       if (loading) return

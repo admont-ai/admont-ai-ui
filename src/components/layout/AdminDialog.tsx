@@ -2494,8 +2494,16 @@ interface LlmProviderEntry {
   model?: string
   default_model?: string
   favourite_models?: string[]
+  max_tokens?: number
   source?: string
   [key: string]: unknown
+}
+
+interface LlmTokenLimits {
+  ask: number
+  generate: number
+  summarize: number
+  edit: number
 }
 
 interface LlmModelEntry {
@@ -2543,13 +2551,27 @@ function LlmProvidersTab() {
   const [adding, setAdding] = useState(false)
   const [showNewKey, setShowNewKey] = useState(false)
 
+  // Token limits state (per-action output limits; "" = provider ceiling)
+  const [tokenLimits, setTokenLimits] = useState<Record<string, string>>({ ask: "", generate: "", summarize: "", edit: "" })
+  const [savingLimits, setSavingLimits] = useState(false)
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [provRes, supRes] = await Promise.all([
+      const [provRes, supRes, limitsRes] = await Promise.all([
         authFetch("/admin/llm"),
         authFetch("/admin/llm/supported"),
+        authFetch("/admin/llm/token-limits"),
       ])
+      if (limitsRes.ok) {
+        const data: LlmTokenLimits = await limitsRes.json()
+        setTokenLimits({
+          ask: data.ask ? String(data.ask) : "",
+          generate: data.generate ? String(data.generate) : "",
+          summarize: data.summarize ? String(data.summarize) : "",
+          edit: data.edit ? String(data.edit) : "",
+        })
+      }
       if (provRes.ok) {
         const data = await provRes.json()
         console.log("[admin/llm]", data)
@@ -2602,6 +2624,7 @@ function LlmProvidersTab() {
       api_key: apiKey,
       base_url: (p.base_url as string) ?? "",
       model: p.default_model ?? (p.model as string) ?? "",
+      max_tokens: p.max_tokens ? String(p.max_tokens) : "",
     }
     for (const f of getSupportedFields(p.provider_type)) {
       if (!(f.key in fields)) {
@@ -2627,6 +2650,28 @@ function LlmProvidersTab() {
     )
   }
 
+  async function handleSaveLimits() {
+    setSavingLimits(true)
+    try {
+      const body = {
+        ask: Number(tokenLimits.ask) || 0,
+        generate: Number(tokenLimits.generate) || 0,
+        summarize: Number(tokenLimits.summarize) || 0,
+        edit: Number(tokenLimits.edit) || 0,
+      }
+      const res = await authFetch("/admin/llm/token-limits", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) toast.success("Token limits saved")
+    } catch {
+      // handled by authFetch
+    } finally {
+      setSavingLimits(false)
+    }
+  }
+
   async function handleUpdate(name: string) {
     setSavingEdit(true)
     try {
@@ -2634,6 +2679,8 @@ function LlmProvidersTab() {
       for (const [k, v] of Object.entries(editFields)) {
         if (k === "api_key") {
           if (v !== editOriginalKey && v.trim()) body[k] = v.trim()
+        } else if (k === "max_tokens") {
+          if (v.trim()) body[k] = Number(v) || 0
         } else if (v.trim()) {
           body[k === "model" ? "default_model" : k] = v.trim()
         }
@@ -2684,7 +2731,12 @@ function LlmProvidersTab() {
     try {
       const body: Record<string, unknown> = { name: newName.trim(), provider_type: newProvider }
       for (const [k, v] of Object.entries(newFields)) {
-        if (v.trim()) body[k === "model" ? "default_model" : k] = v.trim()
+        if (!v.trim()) continue
+        if (k === "max_tokens") {
+          body[k] = Number(v) || 0
+        } else {
+          body[k === "model" ? "default_model" : k] = v.trim()
+        }
       }
       const res = await authFetch("/admin/llm", {
         method: "POST",
@@ -2817,6 +2869,9 @@ function LlmProvidersTab() {
                   <input type="text" value={newFields.model ?? ""} onChange={(e) => setNewField("model", e.target.value)} placeholder="Default model (optional)" className={inputClass} />
                 )}
               </LabeledField>
+              <LabeledField label="Max Tokens (cost ceiling)">
+                <input type="number" min="1" value={newFields.max_tokens ?? ""} onChange={(e) => setNewField("max_tokens", e.target.value)} placeholder="16384" className={inputClass} />
+              </LabeledField>
               {newExtra.map((f) => (
                 <LabeledField key={f.key} label={f.label + (f.required ? " *" : "")}>
                   <input
@@ -2848,6 +2903,32 @@ function LlmProvidersTab() {
           )}
         </div>
       )}
+
+      {/* Token limits */}
+      <div className="border rounded-md p-4 space-y-3">
+        <h4 className="text-sm font-medium">Token Limits</h4>
+        <p className="text-xs text-muted-foreground">
+          Output token limits per request type. Each request is additionally capped by the provider&apos;s max tokens. Empty = provider ceiling.
+        </p>
+        <div className="grid grid-cols-4 gap-2">
+          <LabeledField label="Ask / Chat">
+            <input type="number" min="0" value={tokenLimits.ask} onChange={(e) => setTokenLimits((p) => ({ ...p, ask: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Generate documents">
+            <input type="number" min="0" value={tokenLimits.generate} onChange={(e) => setTokenLimits((p) => ({ ...p, generate: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Summarize">
+            <input type="number" min="0" value={tokenLimits.summarize} onChange={(e) => setTokenLimits((p) => ({ ...p, summarize: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Edit actions">
+            <input type="number" min="0" value={tokenLimits.edit} onChange={(e) => setTokenLimits((p) => ({ ...p, edit: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+        </div>
+        <Button size="sm" onClick={handleSaveLimits} disabled={savingLimits}>
+          {savingLimits && <Loader2 className="size-4 animate-spin" />}
+          Save Limits
+        </Button>
+      </div>
 
       {/* Provider list */}
       <div className="border rounded-md divide-y">
@@ -2896,6 +2977,9 @@ function LlmProvidersTab() {
                       ) : (
                         <input type="text" value={editFields.model ?? ""} onChange={(e) => setEditField("model", e.target.value)} placeholder="Default model (optional)" className={inputClass} />
                       )}
+                    </LabeledField>
+                    <LabeledField label="Max Tokens (cost ceiling)">
+                      <input type="number" min="1" value={editFields.max_tokens ?? ""} onChange={(e) => setEditField("max_tokens", e.target.value)} placeholder="16384" className={inputClass} />
                     </LabeledField>
                     {extra.map((f) => (
                       <LabeledField key={f.key} label={f.label + (f.required ? " *" : "")}>
@@ -2970,6 +3054,7 @@ function LlmProvidersTab() {
                       {p.api_key && <p>API Key: {maskSecret(p.api_key)}</p>}
                       {p.base_url && <p>Base URL: {p.base_url}</p>}
                       {(p.default_model || p.model) && <p>Default Model: {p.default_model || p.model}</p>}
+                      {!!p.max_tokens && <p>Max Tokens: {p.max_tokens}</p>}
                       <p>
                         Favourite Models: {p.favourite_models?.length
                           ? p.favourite_models.join(", ")

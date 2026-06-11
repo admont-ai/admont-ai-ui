@@ -14,6 +14,8 @@ ModuleRegistry.registerModules([AllCommunityModule])
 const gridTheme = themeQuartz.withParams({
   oddRowBackgroundColor: "color-mix(in srgb, var(--muted) 50%, transparent)",
   spacing: 4,
+  wrapperBorderRadius: 0,
+  borderRadius: 0,
 })
 
 interface SpreadsheetViewerProps {
@@ -168,7 +170,7 @@ export function SpreadsheetViewer({ repoSlug, filePath, handleRef, onRename, onD
         </div>
       )}
 
-      <div className="min-h-0 flex-1 px-4 pb-4 pt-3">
+      <div className="min-h-0 flex-1">
         {rowData.length === 0 ? (
           <p className="py-4 text-muted-foreground text-sm">This sheet is empty.</p>
         ) : (

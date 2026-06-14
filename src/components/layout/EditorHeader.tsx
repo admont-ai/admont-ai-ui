@@ -93,7 +93,7 @@ export function EditorHeader({
         {editing ? (
           <>
             {lastModified && (
-              <time className="text-sm text-muted-foreground mr-2" dateTime={lastModified}>
+              <time className="text-xs text-muted-foreground mr-2" dateTime={lastModified}>
                 Last modified: {new Date(lastModified).toLocaleString()}
               </time>
             )}
@@ -119,12 +119,12 @@ export function EditorHeader({
         ) : (
           <>
             {isDraft && draftUpdatedAt && (
-              <time className="text-sm text-muted-foreground" dateTime={draftUpdatedAt}>
+              <time className="text-xs text-muted-foreground" dateTime={draftUpdatedAt}>
                 Draft saved: {new Date(draftUpdatedAt).toLocaleString()}
               </time>
             )}
             {!isDraft && lastModified && (
-              <time className="text-sm text-muted-foreground" dateTime={lastModified}>
+              <time className="text-xs text-muted-foreground" dateTime={lastModified}>
                 Last modified: {new Date(lastModified).toLocaleString()}
               </time>
             )}

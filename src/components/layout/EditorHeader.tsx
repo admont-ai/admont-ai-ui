@@ -127,14 +127,14 @@ export function EditorHeader({
             )}
             {rightSlot}
             {isDraft && onPublish && (
-              <Button variant="default" size="icon-sm" onClick={onPublish} title="Publish">
+              <Button variant="ghost" size="icon-sm" onClick={onPublish} title="Publish">
                 <Send />
               </Button>
             )}
             {isDraft && onDiscardDraft && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="icon-sm" title="Discard draft">
+                  <Button variant="ghost" size="icon-sm" title="Discard draft">
                     <Trash2 />
                   </Button>
                 </AlertDialogTrigger>

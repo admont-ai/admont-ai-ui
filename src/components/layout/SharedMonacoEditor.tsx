@@ -177,7 +177,7 @@ export function SharedMonacoEditor({
             language={language}
             original={diffOriginal}
             modified={value}
-            theme="light-grey"
+            theme="wiki-light"
             onMount={handleDiffMount}
             options={options}
           />
@@ -187,7 +187,7 @@ export function SharedMonacoEditor({
             value={value}
             onChange={onChange ? (v) => onChange(v ?? "") : undefined}
             onMount={handleMount}
-            theme="light-grey"
+            theme="wiki-light"
             options={options}
           />
         )}

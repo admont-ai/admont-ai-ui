@@ -3,12 +3,12 @@ import { setupMarkdownProviders } from "./monaco-markdown"
 
 loader.init().then((monaco) => {
   setupMarkdownProviders(monaco)
-  monaco.editor.defineTheme("light-grey", {
+  monaco.editor.defineTheme("wiki-light", {
     base: "vs",
     inherit: true,
     rules: [],
     colors: {
-      "editor.background": "#f5f5f5",
+      "editor.background": "#ffffff",
     },
   })
 })

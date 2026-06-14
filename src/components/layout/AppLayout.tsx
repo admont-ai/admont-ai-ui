@@ -528,11 +528,10 @@ export function AppLayout() {
                           <EditorHeader
                             fileName={fileName}
                             editing
-                            isDraft={isDraft || mdAutosave.lastSavedAt != null}
+                            isDraft={isDraft}
                             lastModified={lastModified}
                             publishing={publishing}
                             saveStatus={mdAutosave.status}
-                            lastSavedAt={mdAutosave.lastSavedAt}
                             onPublish={handlePublish}
                             onCancel={handleCancel}
                             rightSlot={mdViewState && (

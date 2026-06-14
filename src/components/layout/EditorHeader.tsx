@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Check, EllipsisVertical, FileDown, FilePenLine, History, Info, Loader2, Pencil, Save, Send, Trash2, TriangleAlert, X } from "lucide-react"
+import { EllipsisVertical, FileDown, FilePenLine, History, Info, Pencil, Save, Send, Trash2, TriangleAlert, X } from "lucide-react"
 import type { AutosaveStatus } from "@/hooks/use-debounced-autosave"
 import {
   AlertDialog,
@@ -44,10 +44,9 @@ interface EditorHeaderProps {
   children?: React.ReactNode
   // Rendered on the right, before the action buttons (e.g. the MD view toggle).
   rightSlot?: React.ReactNode
-  // When set (markdown autosave), an autosave status indicator replaces the
-  // manual save-draft button.
+  // When set (markdown autosave), the manual save-draft button is hidden and
+  // only autosave failures are surfaced.
   saveStatus?: AutosaveStatus
-  lastSavedAt?: number | null
 }
 
 export function EditorHeader({
@@ -72,7 +71,6 @@ export function EditorHeader({
   children,
   rightSlot,
   saveStatus,
-  lastSavedAt = null,
 }: EditorHeaderProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [fileInfoOpen, setFileInfoOpen] = useState(false)
@@ -98,7 +96,7 @@ export function EditorHeader({
             )}
             {rightSlot}
             {saveStatus !== undefined ? (
-              <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+              <AutosaveIndicator status={saveStatus} />
             ) : onSave && (
               <Button variant="ghost" size="icon-sm" onClick={onSave} disabled={saving} title="Save draft">
                 <Save />
@@ -305,34 +303,12 @@ function FileInfoDialog({
   )
 }
 
-function AutosaveIndicator({ status, lastSavedAt }: { status: AutosaveStatus; lastSavedAt: number | null }) {
-  const savedTime = lastSavedAt ? new Date(lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""
-  switch (status) {
-    case "saving":
-      return (
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin" /> Saving…
-        </span>
-      )
-    case "saved":
-      return (
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Check className="size-3.5" /> Saved{savedTime && ` ${savedTime}`}
-        </span>
-      )
-    case "error":
-      return (
-        <span className="flex items-center gap-1.5 text-xs text-destructive" title="Autosave failed; retrying">
-          <TriangleAlert className="size-3.5" /> Save failed
-        </span>
-      )
-    case "dirty":
-      return <span className="text-xs text-muted-foreground">Unsaved changes</span>
-    default:
-      return lastSavedAt ? (
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Check className="size-3.5" /> Saved{savedTime && ` ${savedTime}`}
-        </span>
-      ) : null
-  }
+// Only surfaces autosave failures; successful saves are silent.
+function AutosaveIndicator({ status }: { status: AutosaveStatus }) {
+  if (status !== "error") return null
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-destructive" title="Autosave failed; retrying">
+      <TriangleAlert className="size-3.5" /> Save failed
+    </span>
+  )
 }

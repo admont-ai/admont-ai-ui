@@ -68,7 +68,7 @@ export function EditorHeader({
   const [fileInfoOpen, setFileInfoOpen] = useState(false)
   const hasMenu = !!(onShowHistory || onRename || onDelete || fileInfo || onExportPdf)
   return (
-    <header className="flex items-center justify-between border-b pl-6 pr-3 py-1.5">
+    <header className="flex items-center justify-between border-b bg-muted pl-6 pr-3 py-1.5">
       <div className="flex items-center gap-2 truncate">
         <h2 className="text-lg font-semibold truncate">{fileName}</h2>
         {isDraft && (

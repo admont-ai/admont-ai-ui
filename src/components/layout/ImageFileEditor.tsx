@@ -199,6 +199,7 @@ export function ImageFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
     <div className="flex h-full flex-col">
       <EditorHeader
         fileName={rawFileName}
+        filePath={filePath}
         editing
         canEdit={canEdit}
         onSave={handleSave}
@@ -210,6 +211,7 @@ export function ImageFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
     <div className="flex h-full flex-col">
       <EditorHeader
         fileName={rawFileName}
+        filePath={filePath}
         canEdit={canEdit && !svg}
         onEdit={canEdit && !svg ? () => setEditing(true) : undefined}
         onShowHistory={() => setHistoryOpen(true)}

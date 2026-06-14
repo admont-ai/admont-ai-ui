@@ -24,6 +24,8 @@ import type { FileInfo } from "@/hooks/use-document-content"
 
 interface EditorHeaderProps {
   fileName: string
+  /** Full repo-relative path of the file; shown as the title when provided. */
+  filePath?: string
   editing?: boolean
   isDraft?: boolean
   lastModified?: string | null
@@ -51,6 +53,7 @@ interface EditorHeaderProps {
 
 export function EditorHeader({
   fileName,
+  filePath,
   editing = false,
   isDraft = false,
   lastModified = null,
@@ -78,7 +81,7 @@ export function EditorHeader({
   return (
     <header className="flex items-center justify-between border-b bg-muted pl-6 pr-3 py-1.5">
       <div className="flex items-center gap-2 truncate">
-        <h2 className="text-lg font-semibold truncate">{fileName}</h2>
+        <h2 className="text-sm font-medium truncate" title={filePath ?? fileName}>{filePath ?? fileName}</h2>
         {isDraft && (
           <span className="inline-flex shrink-0 items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
             Draft

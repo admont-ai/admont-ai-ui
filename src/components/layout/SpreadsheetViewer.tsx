@@ -149,7 +149,7 @@ export function SpreadsheetViewer({ repoSlug, filePath, handleRef, onRename, onD
 
   return (
     <div className="flex flex-col -mt-3" style={{ height: "calc(100% + 0.75rem)" }}>
-      <EditorHeader fileName={rawFileName} onRename={onRename} onDelete={onDelete} />
+      <EditorHeader fileName={rawFileName} filePath={filePath} onRename={onRename} onDelete={onDelete} />
 
       {sheets.length > 1 && (
         <div className="flex gap-1 border-b px-4 py-1.5 overflow-x-auto">

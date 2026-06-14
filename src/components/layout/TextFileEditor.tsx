@@ -197,6 +197,7 @@ export function TextFileEditor({ repoSlug, filePath, canEdit, initialEditing, ed
     <div className="flex h-full flex-col">
       <EditorHeader
         fileName={rawFileName}
+        filePath={filePath}
         editing
         isDraft={isDraft}
         lastModified={lastModified}
@@ -252,6 +253,7 @@ export function TextFileEditor({ repoSlug, filePath, canEdit, initialEditing, ed
     <div className="flex h-full flex-col [&>header]:mb-0">
       <EditorHeader
         fileName={rawFileName}
+        filePath={filePath}
         isDraft={isDraft}
         lastModified={lastModified}
         draftUpdatedAt={draftUpdatedAt}

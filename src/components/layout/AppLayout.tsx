@@ -527,6 +527,7 @@ export function AppLayout() {
                         <div className="flex flex-col -mt-3" style={{ height: "calc(100% + 0.75rem)" }}>
                           <EditorHeader
                             fileName={fileName}
+                            filePath={selectedFilePath}
                             editing
                             isDraft={isDraft}
                             lastModified={lastModified}
@@ -600,6 +601,7 @@ export function AppLayout() {
                         <div className="flex flex-col -mt-3" style={{ height: "calc(100% + 0.75rem)" }}>
                           <EditorHeader
                             fileName={fileName}
+                            filePath={selectedFilePath}
                             isDraft={isDraft}
                             lastModified={lastModified}
                             draftUpdatedAt={draftUpdatedAt}

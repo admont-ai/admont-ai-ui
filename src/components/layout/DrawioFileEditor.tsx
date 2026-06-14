@@ -341,6 +341,7 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
     <div className="flex h-full flex-col">
       <EditorHeader
         fileName={rawFileName}
+        filePath={filePath}
         editing
         isDraft={isDraft}
         lastModified={lastModified}
@@ -407,6 +408,7 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
     <div className="flex h-full flex-col">
       <EditorHeader
         fileName={rawFileName}
+        filePath={filePath}
         isDraft={isDraft}
         lastModified={lastModified}
         draftUpdatedAt={draftUpdatedAt}

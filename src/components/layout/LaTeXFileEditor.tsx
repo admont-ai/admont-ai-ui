@@ -303,6 +303,7 @@ export function LaTeXFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
     <div className="flex h-full flex-col">
       <EditorHeader
         fileName={fileName}
+        filePath={filePath}
         editing
         isDraft={isDraft}
         lastModified={lastModified}
@@ -379,6 +380,7 @@ export function LaTeXFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
     <div className="flex h-full flex-col">
       <EditorHeader
         fileName={fileName}
+        filePath={filePath}
         isDraft={isDraft}
         lastModified={lastModified}
         draftUpdatedAt={draftUpdatedAt}

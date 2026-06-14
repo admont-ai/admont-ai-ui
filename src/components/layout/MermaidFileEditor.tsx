@@ -306,6 +306,7 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     <div className="flex h-full flex-col">
       <EditorHeader
         fileName={rawFileName}
+        filePath={filePath}
         editing
         isDraft={isDraft}
         lastModified={lastModified}
@@ -404,6 +405,7 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     <div className="flex h-full flex-col">
       <EditorHeader
         fileName={rawFileName}
+        filePath={filePath}
         isDraft={isDraft}
         lastModified={lastModified}
         draftUpdatedAt={draftUpdatedAt}

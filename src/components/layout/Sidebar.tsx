@@ -336,7 +336,7 @@ export function Sidebar({
   }, [multiSelected.size])
 
   return (
-    <nav className="flex h-full flex-col overflow-hidden pt-1.5 pb-4 pl-2 pr-1">
+    <nav className="flex h-full flex-col overflow-hidden bg-muted pt-1.5 pb-4 pl-2 pr-1">
       {repoSlug && (
         <>
           <div className="mb-1.5 flex shrink-0 items-center gap-0.5">

@@ -76,7 +76,7 @@ export function Header({
 
   return (
   <>
-    <header className="flex h-14 items-center border-b px-4 gap-2">
+    <header className="flex h-14 items-center border-b bg-muted px-4 gap-2">
       {repos.length > 0 && (
         <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Toggle sidebar">
           {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}

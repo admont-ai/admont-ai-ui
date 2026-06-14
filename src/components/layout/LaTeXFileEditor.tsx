@@ -390,7 +390,7 @@ export function LaTeXFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
         onRename={onRename}
         onDelete={onDelete}
       />
-      <div className="min-h-0 flex-1 overflow-auto bg-[#f5f5f5] px-6">
+      <div className="min-h-0 flex-1 overflow-auto bg-background px-6">
         {previewHtml ? (
           <LatexPreview html={previewHtml} />
         ) : (

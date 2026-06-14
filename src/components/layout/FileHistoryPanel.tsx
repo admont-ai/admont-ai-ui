@@ -70,7 +70,7 @@ export function FileHistoryPanel({
   }, [fetch])
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-muted">
       <div className="border-b flex items-center justify-between px-4 py-1.5">
         <div className="flex items-center gap-2">
           <History className="text-muted-foreground h-4 w-4" />

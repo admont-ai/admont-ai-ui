@@ -662,7 +662,7 @@ export function AppLayout() {
       </ResizablePanelGroup>
       )}
       {cursorPosition && (
-        <div className="border-t bg-background flex items-center px-4 py-1 text-sm text-muted-foreground">
+        <div className="border-t bg-muted flex items-center px-4 py-1 text-sm text-muted-foreground">
           <span className="ml-auto tabular-nums">
             Ln {cursorPosition.line}, Col {cursorPosition.column}
           </span>

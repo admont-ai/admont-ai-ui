@@ -381,11 +381,11 @@ export function ViewModeToggle({
   className?: string
 }) {
   const modes: { value: ViewMode; label: string; icon: React.ReactNode }[] = [
-    { value: "rich-text", label: "Rich Text", icon: <FileText className="h-3.5 w-3.5" /> },
-    { value: "source", label: "Source", icon: <Code className="h-3.5 w-3.5" /> },
+    { value: "rich-text", label: "Rich Text", icon: <FileText className="size-4" /> },
+    { value: "source", label: "Source", icon: <Code className="size-4" /> },
   ]
   if (showDiff) {
-    modes.push({ value: "diff", label: "Diff", icon: <GitCompare className="h-3.5 w-3.5" /> })
+    modes.push({ value: "diff", label: "Diff", icon: <GitCompare className="size-4" /> })
   }
 
   return (
@@ -397,7 +397,7 @@ export function ViewModeToggle({
           onClick={() => onChange(m.value)}
           title={m.label}
           aria-label={m.label}
-          className={`flex items-center justify-center rounded p-1.5 transition-colors ${
+          className={`flex size-8 items-center justify-center rounded-md transition-colors ${
             viewMode === m.value
               ? "bg-accent text-accent-foreground"
               : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"

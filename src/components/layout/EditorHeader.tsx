@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { EllipsisVertical, FileDown, FilePenLine, History, Info, Pencil, Save, Send, Trash2, TriangleAlert, X } from "lucide-react"
+import { Check, Copy, EllipsisVertical, FileDown, FilePenLine, History, Info, Pencil, Save, Send, Trash2, TriangleAlert, X } from "lucide-react"
 import type { AutosaveStatus } from "@/hooks/use-debounced-autosave"
 import {
   AlertDialog,
@@ -77,11 +77,25 @@ export function EditorHeader({
 }: EditorHeaderProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [fileInfoOpen, setFileInfoOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const hasMenu = !!(onShowHistory || onRename || onDelete || fileInfo || onExportPdf)
+
+  const copyPath = () => {
+    navigator.clipboard?.writeText(filePath ?? fileName).then(
+      () => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      },
+      () => {},
+    )
+  }
   return (
     <header className="flex items-center justify-between border-b bg-muted pl-6 pr-3 py-1.5">
       <div className="flex items-center gap-2 truncate">
         <h2 className="text-sm font-normal truncate" title={filePath ?? fileName}>{(filePath ?? fileName).replace(/\//g, " / ")}</h2>
+        <Button variant="ghost" size="icon-xs" className="shrink-0 text-muted-foreground" onClick={copyPath} title={copied ? "Copied!" : "Copy path"}>
+          {copied ? <Check /> : <Copy />}
+        </Button>
         {isDraft && (
           <span className="inline-flex shrink-0 items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
             Draft

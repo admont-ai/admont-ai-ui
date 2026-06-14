@@ -432,12 +432,14 @@ interface MarkdownEditorProps {
   // When provided, the rich-text/source toggle is surfaced to the host
   // (rendered in the editor header) instead of inline above the editor.
   onViewState?: (state: MarkdownViewState | null) => void
+  // Fires whenever the content changes (rich-text or source) with the current markdown.
+  onChange?: (markdown: string) => void
 }
 
 export const MarkdownEditor = forwardRef<
   MarkdownEditorHandle,
   MarkdownEditorProps
->(function MarkdownEditor({ markdown, repoSlug, filePath, repos = [], onDiagramSaved, onNavigate, diffMarkdown, readOnly, onViewState }, ref) {
+>(function MarkdownEditor({ markdown, repoSlug, filePath, repos = [], onDiagramSaved, onNavigate, diffMarkdown, readOnly, onViewState, onChange }, ref) {
   const editorRef = useRef<MDXEditorMethods>(null)
   const lexicalEditorRef = useRef<LexicalEditor | null>(null)
   const [lexicalEditor, setLexicalEditor] = useState<LexicalEditor | null>(null)
@@ -786,6 +788,7 @@ export const MarkdownEditor = forwardRef<
           <MDXEditor
             ref={editorRef}
             markdown={markdown}
+            onChange={onChange}
             readOnly={readOnly}
             contentEditableClassName="prose prose-neutral dark:prose-invert max-w-none"
             plugins={[
@@ -993,7 +996,7 @@ export const MarkdownEditor = forwardRef<
         <SharedMonacoEditor
           language="markdown"
           value={monacoContent}
-          onChange={setMonacoContent}
+          onChange={(v) => { setMonacoContent(v); onChange?.(v) }}
           readOnly={readOnly}
           onEditorRef={handleMonacoEditorRef}
         />

@@ -21,6 +21,7 @@ import { usePdfExport } from "@/hooks/use-pdf-export"
 import { hasPermission } from "@/hooks/use-file-permission"
 import { useDocumentMutations } from "@/hooks/use-document-mutations"
 import { useDocumentSave } from "@/hooks/use-document-save"
+import { useDebouncedAutosave } from "@/hooks/use-debounced-autosave"
 import { useRepos } from "@/hooks/use-repos"
 import { useAuth } from "@/contexts/auth-context"
 import { useAiLog } from "@/hooks/use-ai-log"
@@ -188,10 +189,18 @@ export function AppLayout() {
     }
   }, [selectedFilePath, refetch])
 
-  const { save, saving, publish, publishing, deleteDraft } = useDocumentSave(
+  const { save, publish, publishing, deleteDraft } = useDocumentSave(
     selectedRepoSlug,
     selectedFilePath
   )
+
+  // Debounced autosave for the markdown editor: drafts persist automatically
+  // while editing, so there is no manual save-draft button.
+  const mdAutosave = useDebouncedAutosave({
+    enabled: editing && canEdit && isMarkdownFile(selectedFilePath),
+    save,
+    baseline: restoredMarkdown ?? content ?? "",
+  })
 
   const [editOnLoad, setEditOnLoad] = useState(false)
   const [editSignal, setEditSignal] = useState(0)
@@ -262,24 +271,14 @@ export function AppLayout() {
     setRenamingFile(false)
   }, [selectedFilePath, renameDocument])
 
-  const handleSave = useCallback(async () => {
-    const newContent = editorRef.current?.getMarkdown() ?? ""
-    await save(newContent)
-    setEditing(false)
-    refetch()
-    refreshSidebar()
-  }, [save, refetch, refreshSidebar])
-
   const handlePublish = useCallback(async () => {
-    if (editing) {
-      const newContent = editorRef.current?.getMarkdown() ?? ""
-      await save(newContent)
-    }
+    // Flush any pending autosave so the published draft has the latest edits.
+    if (editing) await mdAutosave.flush()
     await publish()
     setEditing(false)
     refetch()
     refreshSidebar()
-  }, [editing, save, publish, refetch, refreshSidebar])
+  }, [editing, mdAutosave, publish, refetch, refreshSidebar])
 
   const handleDiscardDraft = useCallback(async () => {
     await deleteDraft()
@@ -295,10 +294,13 @@ export function AppLayout() {
     refreshSidebar()
   }, [save, refetch, refreshSidebar])
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = useCallback(async () => {
+    // Persist the last edits (they were autosaved as a draft anyway) before exiting.
+    await mdAutosave.flush()
     setEditing(false)
     setRestoredMarkdown(null)
-  }, [])
+    refetch()
+  }, [mdAutosave, refetch])
 
   const handleExportCurrentPdf = useCallback(() => {
     const file = selectedFilePath.split("/").pop() ?? ""
@@ -526,11 +528,11 @@ export function AppLayout() {
                           <EditorHeader
                             fileName={fileName}
                             editing
-                            isDraft={isDraft}
+                            isDraft={isDraft || mdAutosave.lastSavedAt != null}
                             lastModified={lastModified}
-                            saving={saving}
                             publishing={publishing}
-                            onSave={handleSave}
+                            saveStatus={mdAutosave.status}
+                            lastSavedAt={mdAutosave.lastSavedAt}
                             onPublish={handlePublish}
                             onCancel={handleCancel}
                             rightSlot={mdViewState && (
@@ -553,6 +555,7 @@ export function AppLayout() {
                               onDiagramSaved={handleDiagramSaved}
                               onNavigate={handleSearchSelect}
                               onViewState={setMdViewState}
+                              onChange={mdAutosave.notifyChange}
                             />
                             {aiAvailable && <AiEditBox editorRef={editorRef} />}
                           </div>

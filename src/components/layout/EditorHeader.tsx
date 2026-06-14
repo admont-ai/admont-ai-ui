@@ -81,7 +81,7 @@ export function EditorHeader({
   return (
     <header className="flex items-center justify-between border-b bg-muted pl-6 pr-3 py-1.5">
       <div className="flex items-center gap-2 truncate">
-        <h2 className="text-sm font-medium truncate" title={filePath ?? fileName}>{filePath ?? fileName}</h2>
+        <h2 className="text-sm font-medium truncate" title={filePath ?? fileName}>{(filePath ?? fileName).replace(/\//g, " / ")}</h2>
         {isDraft && (
           <span className="inline-flex shrink-0 items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
             Draft

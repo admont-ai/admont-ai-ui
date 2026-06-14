@@ -36,7 +36,7 @@ import { DrawioFileEditor } from "./DrawioFileEditor"
 import { LaTeXFileEditor } from "./LaTeXFileEditor"
 import { AdminPanel } from "./AdminDialog"
 import { Header } from "./Header"
-import { MarkdownEditor, type MarkdownEditorHandle } from "./MarkdownEditor"
+import { MarkdownEditor, ViewModeToggle, type MarkdownEditorHandle, type MarkdownViewState } from "./MarkdownEditor"
 import { EditorHeader } from "./EditorHeader"
 import { MermaidFileEditor } from "./MermaidFileEditor"
 import { TextFileEditor } from "./TextFileEditor"
@@ -94,6 +94,9 @@ export function AppLayout() {
   const sidebarRef = usePanelRef()
   const editorRef = useRef<MarkdownEditorHandle>(null)
   const diagramRef = useRef<DiagramSourceHandle>(null)
+  // Rich-text/source toggle controls surfaced by the active markdown editor,
+  // rendered in the editor header.
+  const [mdViewState, setMdViewState] = useState<MarkdownViewState | null>(null)
   const { repos, loading: reposLoading, refresh: refreshRepos } = useRepos()
 
   // Initialise from URL deep link
@@ -530,6 +533,14 @@ export function AppLayout() {
                             onSave={handleSave}
                             onPublish={handlePublish}
                             onCancel={handleCancel}
+                            rightSlot={mdViewState && (
+                              <ViewModeToggle
+                                viewMode={mdViewState.viewMode}
+                                onChange={mdViewState.onChange}
+                                showDiff={mdViewState.showDiff}
+                                className="flex items-center gap-0.5"
+                              />
+                            )}
                           />
                           <div className="relative min-h-0 flex-1">
                             <MarkdownEditor
@@ -541,6 +552,7 @@ export function AppLayout() {
                               repos={repos}
                               onDiagramSaved={handleDiagramSaved}
                               onNavigate={handleSearchSelect}
+                              onViewState={setMdViewState}
                             />
                             {aiAvailable && <AiEditBox editorRef={editorRef} />}
                           </div>
@@ -598,6 +610,14 @@ export function AppLayout() {
                             onRename={canEdit ? () => setRenamingFile(true) : undefined}
                             onDelete={canDeleteFile ? handleDeleteFile : undefined}
                             onExportPdf={handleExportCurrentPdf}
+                            rightSlot={mdViewState && (
+                              <ViewModeToggle
+                                viewMode={mdViewState.viewMode}
+                                onChange={mdViewState.onChange}
+                                showDiff={mdViewState.showDiff}
+                                className="flex items-center gap-0.5"
+                              />
+                            )}
                           />
                           <div className="min-h-0 flex-1">
                             <MarkdownEditor
@@ -608,6 +628,7 @@ export function AppLayout() {
                               repoSlug={selectedRepoSlug}
                               filePath={selectedFilePath}
                               onNavigate={handleSearchSelect}
+                              onViewState={setMdViewState}
                             />
                           </div>
                         </div>

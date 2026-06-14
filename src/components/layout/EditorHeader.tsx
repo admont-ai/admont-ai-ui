@@ -41,6 +41,8 @@ interface EditorHeaderProps {
   onDelete?: () => void
   onExportPdf?: () => void
   children?: React.ReactNode
+  // Rendered on the right, before the action buttons (e.g. the MD view toggle).
+  rightSlot?: React.ReactNode
 }
 
 export function EditorHeader({
@@ -63,6 +65,7 @@ export function EditorHeader({
   onDelete,
   onExportPdf,
   children,
+  rightSlot,
 }: EditorHeaderProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [fileInfoOpen, setFileInfoOpen] = useState(false)
@@ -79,6 +82,7 @@ export function EditorHeader({
         {children}
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {rightSlot}
         {editing ? (
           <>
             {lastModified && (

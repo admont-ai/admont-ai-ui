@@ -359,16 +359,26 @@ function InsertTocButton({ editorRef }: { editorRef: React.RefObject<MDXEditorMe
   )
 }
 
-type ViewMode = "rich-text" | "source" | "diff"
+export type ViewMode = "rich-text" | "source" | "diff"
 
-function ViewModeToggle({
+/** Controls for the rich-text/source/diff toggle, surfaced to a host (e.g. the
+ * editor header) via MarkdownEditor's onViewState callback. */
+export interface MarkdownViewState {
+  viewMode: ViewMode
+  showDiff: boolean
+  onChange: (mode: ViewMode) => void
+}
+
+export function ViewModeToggle({
   viewMode,
   onChange,
   showDiff,
+  className = "flex items-center gap-0.5 border-b bg-background px-2 py-1",
 }: {
   viewMode: ViewMode
   onChange: (mode: ViewMode) => void
   showDiff: boolean
+  className?: string
 }) {
   const modes: { value: ViewMode; label: string; icon: React.ReactNode }[] = [
     { value: "rich-text", label: "Rich Text", icon: <FileText className="h-3.5 w-3.5" /> },
@@ -379,7 +389,7 @@ function ViewModeToggle({
   }
 
   return (
-    <div className="flex items-center gap-0.5 border-b bg-background px-2 py-1">
+    <div className={className}>
       {modes.map((m) => (
         <button
           key={m.value}
@@ -418,12 +428,15 @@ interface MarkdownEditorProps {
   onNavigate?: (repoSlug: string, filePath: string) => void
   diffMarkdown?: string
   readOnly?: boolean
+  // When provided, the rich-text/source toggle is surfaced to the host
+  // (rendered in the editor header) instead of inline above the editor.
+  onViewState?: (state: MarkdownViewState | null) => void
 }
 
 export const MarkdownEditor = forwardRef<
   MarkdownEditorHandle,
   MarkdownEditorProps
->(function MarkdownEditor({ markdown, repoSlug, filePath, repos = [], onDiagramSaved, onNavigate, diffMarkdown, readOnly }, ref) {
+>(function MarkdownEditor({ markdown, repoSlug, filePath, repos = [], onDiagramSaved, onNavigate, diffMarkdown, readOnly, onViewState }, ref) {
   const editorRef = useRef<MDXEditorMethods>(null)
   const lexicalEditorRef = useRef<LexicalEditor | null>(null)
   const [lexicalEditor, setLexicalEditor] = useState<LexicalEditor | null>(null)
@@ -469,6 +482,13 @@ export const MarkdownEditor = forwardRef<
 
     setViewMode(newMode)
   }, [markdown])
+
+  // Surface the view-mode toggle to the host (editor header) when requested.
+  useEffect(() => {
+    if (!onViewState) return
+    onViewState({ viewMode, showDiff: diffMarkdown != null, onChange: handleViewModeChange })
+    return () => onViewState(null)
+  }, [onViewState, viewMode, diffMarkdown, handleViewModeChange])
 
   useImperativeHandle(ref, () => ({
     getMarkdown: () => {
@@ -752,7 +772,9 @@ export const MarkdownEditor = forwardRef<
       )}
 
       {/* View mode toggle — always visible */}
-      <ViewModeToggle viewMode={viewMode} onChange={handleViewModeChange} showDiff={showDiff} />
+      {!onViewState && (
+        <ViewModeToggle viewMode={viewMode} onChange={handleViewModeChange} showDiff={showDiff} />
+      )}
 
       {/* MDXEditor — hidden via display:none when not rich-text (preserves Lexical state) */}
       <div

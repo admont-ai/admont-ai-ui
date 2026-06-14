@@ -395,14 +395,15 @@ export function ViewModeToggle({
           key={m.value}
           type="button"
           onClick={() => onChange(m.value)}
-          className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+          title={m.label}
+          aria-label={m.label}
+          className={`flex items-center justify-center rounded p-1.5 transition-colors ${
             viewMode === m.value
               ? "bg-accent text-accent-foreground"
               : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
           }`}
         >
           {m.icon}
-          {m.label}
         </button>
       ))}
     </div>

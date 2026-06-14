@@ -12,7 +12,18 @@ import { SHAPE_SYNTAX, EDGE_STYLES } from "../constants"
 // Parses: graph/flowchart <direction>\n  nodeId[label] --> nodeId2{label2}
 
 const DIRECTION_RE = /^(?:graph|flowchart)\s+(TD|TB|BT|LR|RL)/i
-const EDGE_RE = /([A-Za-z_][\w]*)\s*(-->|-.->|==>|---|-\.-|===)\s*(?:\|([^|]*)\|)?\s*([A-Za-z_][\w]*)/
+
+// A node's optional inline shape, e.g. [label], ((label)), {label}, ([label]),
+// [(label)], {{label}}, >label]. Matches the same shapes as detectShape().
+const SHAPE_TOKEN =
+  "(?:\\[{1,3}[^[\\]]*\\]{1,3}|\\({1,3}[^()]*\\){1,3}|\\{{1,3}[^{}]*\\}{1,3}|>\\s*[^\\]]*\\])"
+
+// Edge with optional inline shape definitions on either side, e.g.
+// `A[Start] --> B[Process]` or `A{Decision} -->|Yes| C[(DB)]`.
+// Groups: 1=sourceId, 2=sourceShape?, 3=arrow, 4=edgeLabel?, 5=targetId, 6=targetShape?
+const EDGE_RE = new RegExp(
+  `^([A-Za-z_][\\w]*)\\s*(${SHAPE_TOKEN})?\\s*(-->|-\\.->|==>|---|-\\.-|===)\\s*(?:\\|([^|]*)\\|)?\\s*([A-Za-z_][\\w]*)\\s*(${SHAPE_TOKEN})?`,
+)
 
 function detectShape(text: string): { label: string; shape: FlowchartShape } {
   // Try each shape syntax (longest first to avoid partial matches)
@@ -67,32 +78,20 @@ export const flowchartAdapter: DiagramAdapter = {
       // Try edge first
       const edgeMatch = trimmed.match(EDGE_RE)
       if (edgeMatch) {
-        const [, sourceId, arrow, edgeLabel, targetId] = edgeMatch
+        const [, sourceId, sourceShape, arrow, edgeLabel, targetId, targetShape] = edgeMatch
 
-        // Register nodes if not yet seen
+        // Register nodes if not yet seen, applying any inline shape definition
+        // present on this line (e.g. `A[Start] --> B{Decision}`). An inline
+        // shape always wins so a later bare reference can't clobber the label.
         if (!nodeMap.has(sourceId)) {
           nodeMap.set(sourceId, { label: sourceId, shape: "rect" })
         }
+        if (sourceShape) nodeMap.set(sourceId, detectShape(sourceShape))
+
         if (!nodeMap.has(targetId)) {
           nodeMap.set(targetId, { label: targetId, shape: "rect" })
         }
-
-        // Check if nodes have inline definitions in this line
-        // e.g. A[Start] --> B{Decision}
-        const beforeArrow = trimmed.substring(0, trimmed.indexOf(arrow))
-        const afterArrow = trimmed.substring(trimmed.indexOf(targetId))
-
-        const srcNodeMatch = beforeArrow.match(/([A-Za-z_][\w]*)(\[{1,3}[^[\]]*\]{1,3}|\({1,3}[^()]*\){1,3}|\{{1,3}[^{}]*\}{1,3}|>\s*[^\]]*\])/)
-        if (srcNodeMatch) {
-          const det = detectShape(srcNodeMatch[2])
-          nodeMap.set(srcNodeMatch[1], det)
-        }
-
-        const tgtNodeMatch = afterArrow.match(/([A-Za-z_][\w]*)(\[{1,3}[^[\]]*\]{1,3}|\({1,3}[^()]*\){1,3}|\{{1,3}[^{}]*\}{1,3}|>\s*[^\]]*\])/)
-        if (tgtNodeMatch) {
-          const det = detectShape(tgtNodeMatch[2])
-          nodeMap.set(tgtNodeMatch[1], det)
-        }
+        if (targetShape) nodeMap.set(targetId, detectShape(targetShape))
 
         edges.push({
           id: `e${edgeIdx++}`,

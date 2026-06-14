@@ -20,6 +20,9 @@ interface UseDebouncedAutosaveResult {
   lastSavedAt: number | null
   /** Call on every editor change with the current value. */
   notifyChange: (value: string) => void
+  /** Adopt a value as the clean baseline without saving (e.g. editor
+   *  reformatting on load that isn't a user edit). */
+  markClean: (value: string) => void
   /** Force any pending save to run now. */
   flush: () => Promise<void>
 }
@@ -95,6 +98,17 @@ export function useDebouncedAutosave({
     }
   }, [clearTimers])
 
+  // Adopt a value as the clean baseline without saving. Used when the editor
+  // reformats content on load (e.g. visual diagram re-layout) — that isn't a
+  // user edit and must not create a draft.
+  const markClean = useCallback((value: string) => {
+    clearTimers()
+    latestRef.current = value
+    lastSavedRef.current = value
+    pendingRef.current = false
+    if (!savingRef.current) setStatus((s) => (s === "saving" ? s : "idle"))
+  }, [clearTimers])
+
   const notifyChange = useCallback((value: string) => {
     if (!enabled) return
     latestRef.current = value
@@ -130,5 +144,5 @@ export function useDebouncedAutosave({
     return () => window.removeEventListener("beforeunload", handler)
   }, [status])
 
-  return { status, lastSavedAt, notifyChange, flush }
+  return { status, lastSavedAt, notifyChange, markClean, flush }
 }

@@ -110,6 +110,36 @@ describe("useDebouncedAutosave", () => {
     expect(result.current.status).toBe("error")
   })
 
+  it("markClean adopts a value as baseline without saving", async () => {
+    const { save, result } = setup("a")
+    await act(async () => {
+      result.current.markClean("normalized") // e.g. editor reformatting on load
+      vi.advanceTimersByTime(2000)
+    })
+    expect(save).not.toHaveBeenCalled()
+    expect(result.current.status).toBe("idle")
+
+    // A later genuine edit relative to the adopted baseline still saves.
+    await act(async () => {
+      result.current.notifyChange("normalized!")
+      vi.advanceTimersByTime(1000)
+    })
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(save).toHaveBeenCalledWith("normalized!")
+  })
+
+  it("markClean cancels a pending save and re-baselines", async () => {
+    const { save, result } = setup("a")
+    await act(async () => {
+      result.current.notifyChange("ab") // schedules a save
+      vi.advanceTimersByTime(500)
+      result.current.markClean("ab") // adopt as clean before the debounce fires
+      vi.advanceTimersByTime(1000)
+    })
+    expect(save).not.toHaveBeenCalled()
+    expect(result.current.status).toBe("idle")
+  })
+
   it("ignores changes when disabled", async () => {
     const save = vi.fn().mockResolvedValue(undefined)
     const { result } = renderHook(() =>

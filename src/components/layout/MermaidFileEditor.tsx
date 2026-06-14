@@ -99,11 +99,27 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     }
   }, [content, editing])
 
-  // Autosave draft on code change (after the initial content load). The hook's
-  // baseline comparison suppresses no-op changes (init, mode round-trips).
-  useEffect(() => {
-    if (codeInitializedRef.current) autosave.notifyChange(code)
-  }, [code]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Whether the visual editor was entered on persisted content (its load-time
+  // normalization is NOT a draft-worthy change) versus an unsaved diagram such
+  // as an AI result (its normalization IS the change and must be saved).
+  const visualBaselineCleanRef = useRef(true)
+
+  // Route the visual editor's emissions: load/normalization on clean content is
+  // adopted as the baseline (no draft); genuine user edits are autosaved.
+  const handleVisualCodeChange = useCallback((c: string, isInitial: boolean) => {
+    setCode(c)
+    if (isInitial && visualBaselineCleanRef.current) {
+      autosave.markClean(c)
+    } else {
+      autosave.notifyChange(c)
+    }
+  }, [autosave])
+
+  // Autosave draft when the text editor content changes.
+  const handleTextCodeChange = useCallback((c: string) => {
+    setCode(c)
+    autosave.notifyChange(c)
+  }, [autosave])
 
   // Only react to editSignal increments after mount (see DrawioFileEditor).
   const lastEditSignal = useRef(editSignal)
@@ -115,12 +131,16 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
   // Apply an AI-produced diagram source to the open editor.
   const applyAiResult = useCallback((source: string) => {
     codeInitializedRef.current = true
+    // The AI source is an unsaved change — even if the visual editor remounts
+    // and normalizes it, that normalization must be persisted as a draft.
+    visualBaselineCleanRef.current = false
     setCode(source)
+    autosave.notifyChange(source)
     const detection = detectDiagramType(source)
     setVisualDiagramType(detection.isVisual ? (detection.type as VisualDiagramType) : null)
     setVisualEditorKey((k) => k + 1)
     if (canEdit) setEditing(true)
-  }, [canEdit])
+  }, [canEdit, autosave])
 
   // Expose the diagram source to the AI assistant side panel (ask context).
   useImperativeHandle(handleRef, () => ({
@@ -196,6 +216,9 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
 
   const handleEdit = useCallback(() => {
     if (content != null) setCode(content)
+    // Entering the editor on the persisted file: any normalization the visual
+    // editor performs on load is not a user edit.
+    visualBaselineCleanRef.current = true
     const detection = detectDiagramType(content ?? "")
     if (detection.isVisual) {
       setVisualDiagramType(detection.type as VisualDiagramType)
@@ -219,6 +242,9 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     } else {
       const detection = detectDiagramType(code)
       if (detection.isVisual) {
+        // Switching modes is not an edit: adopt the visual editor's load-time
+        // normalization of the current code as the baseline.
+        visualBaselineCleanRef.current = true
         setVisualDiagramType(detection.type as VisualDiagramType)
         setEditorMode("visual")
         setVisualEditorKey((k) => k + 1)
@@ -257,11 +283,14 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
   const handleRestore = useCallback(() => {
     if (!selectedCommit || !diffOldContent) return
     setCode(diffOldContent)
+    // Persisted directly here, so it is already the clean baseline.
     save(diffOldContent)
+    autosave.markClean(diffOldContent)
+    visualBaselineCleanRef.current = true
     setSelectedCommit(null)
     setDiffOldContent(null)
     setEditing(true)
-  }, [selectedCommit, diffOldContent, save])
+  }, [selectedCommit, diffOldContent, save, autosave])
 
   const handleCloseDiff = useCallback(() => {
     setSelectedCommit(null)
@@ -323,13 +352,13 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
             key={visualEditorKey}
             initialCode={code}
             diagramType={visualDiagramType}
-            onCodeChange={setCode}
+            onCodeChange={handleVisualCodeChange}
           />
         ) : (
           <div className="grid h-full grid-cols-2 gap-4">
             <textarea
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => handleTextCodeChange(e.target.value)}
               spellCheck={false}
               className="bg-muted text-foreground border-input h-full w-full resize-none rounded-md border p-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               placeholder="Enter mermaid code..."

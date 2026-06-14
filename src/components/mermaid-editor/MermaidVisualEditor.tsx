@@ -16,7 +16,13 @@ import { CodePreviewPanel } from "./panels/CodePreviewPanel"
 interface MermaidVisualEditorProps {
   initialCode: string
   diagramType: VisualDiagramType
-  onCodeChange: (code: string) => void
+  /**
+   * Fires when the generated code changes. `isInitial` is true while no user
+   * interaction has occurred yet (load-time parse / auto-layout normalization)
+   * and false once the user has edited the diagram — lets the parent avoid
+   * treating editor reformatting as a draft-worthy change.
+   */
+  onCodeChange: (code: string, isInitial: boolean) => void
 }
 
 export function MermaidVisualEditor({
@@ -31,6 +37,25 @@ export function MermaidVisualEditor({
   const defaultModel = adapter.defaultModel()
   const { model, canUndo, canRedo, dispatch, undo, redo } =
     useDiagramState(defaultModel)
+
+  // Tracks whether the user has actually edited the diagram. Every code
+  // regeneration before this flips is load/normalization, not a user edit.
+  const userInteractedRef = useRef(false)
+  const userDispatch = useCallback(
+    (action: Parameters<typeof dispatch>[0]) => {
+      userInteractedRef.current = true
+      dispatch(action)
+    },
+    [dispatch],
+  )
+  const userUndo = useCallback(() => {
+    userInteractedRef.current = true
+    undo()
+  }, [undo])
+  const userRedo = useCallback(() => {
+    userInteractedRef.current = true
+    redo()
+  }, [redo])
 
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([])
@@ -72,7 +97,7 @@ export function MermaidVisualEditor({
   useEffect(() => {
     if (code && code !== prevCodeRef.current) {
       prevCodeRef.current = code
-      onCodeChange(code)
+      onCodeChange(code, !userInteractedRef.current)
     }
   }, [code, onCodeChange])
 
@@ -80,8 +105,8 @@ export function MermaidVisualEditor({
     const layouted = layoutNodes(model.nodes, model.edges, {
       direction: model.direction,
     })
-    dispatch({ type: "SET_NODES", nodes: layouted })
-  }, [model, layoutNodes, dispatch])
+    userDispatch({ type: "SET_NODES", nodes: layouted })
+  }, [model, layoutNodes, userDispatch])
 
   const handleSelectionChange = useCallback(
     (nodeIds: string[], edgeIds: string[]) => {
@@ -93,24 +118,24 @@ export function MermaidVisualEditor({
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedNodeIds.length > 0) {
-      dispatch({ type: "REMOVE_NODES", ids: selectedNodeIds })
+      userDispatch({ type: "REMOVE_NODES", ids: selectedNodeIds })
     }
     if (selectedEdgeIds.length > 0) {
-      dispatch({ type: "REMOVE_EDGES", ids: selectedEdgeIds })
+      userDispatch({ type: "REMOVE_EDGES", ids: selectedEdgeIds })
     }
     setSelectedNodeIds([])
     setSelectedEdgeIds([])
-  }, [selectedNodeIds, selectedEdgeIds, dispatch])
+  }, [selectedNodeIds, selectedEdgeIds, userDispatch])
 
   return (
     <div className="flex h-full flex-col">
       <DiagramToolbar
         model={model}
-        dispatch={dispatch}
+        dispatch={userDispatch}
         canUndo={canUndo}
         canRedo={canRedo}
-        onUndo={undo}
-        onRedo={redo}
+        onUndo={userUndo}
+        onRedo={userRedo}
         onAutoLayout={handleAutoLayout}
         selectedNodeIds={selectedNodeIds}
         selectedEdgeIds={selectedEdgeIds}
@@ -121,7 +146,7 @@ export function MermaidVisualEditor({
         <ResizablePanel defaultSize={60} minSize={30}>
           <VisualCanvas
             model={model}
-            dispatch={dispatch}
+            dispatch={userDispatch}
             selectedNodeIds={selectedNodeIds}
             selectedEdgeIds={selectedEdgeIds}
             onSelectionChange={handleSelectionChange}

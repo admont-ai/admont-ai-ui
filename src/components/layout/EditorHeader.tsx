@@ -91,17 +91,17 @@ export function EditorHeader({
             )}
             {rightSlot}
             {onSave && (
-              <Button variant="default" size="icon-sm" onClick={onSave} disabled={saving} title="Save draft">
+              <Button variant="ghost" size="icon-sm" onClick={onSave} disabled={saving} title="Save draft">
                 <Save />
               </Button>
             )}
             {onPublish && (
-              <Button variant="default" size="icon-sm" onClick={onPublish} disabled={publishing || saving} title="Publish">
+              <Button variant="ghost" size="icon-sm" onClick={onPublish} disabled={publishing || saving} title="Publish">
                 <Send />
               </Button>
             )}
             {onCancel && (
-              <Button variant="outline" size="icon-sm" onClick={onCancel} title="Cancel">
+              <Button variant="ghost" size="icon-sm" onClick={onCancel} title="Cancel">
                 <X />
               </Button>
             )}

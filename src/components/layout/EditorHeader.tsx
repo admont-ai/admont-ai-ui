@@ -148,7 +148,7 @@ export function EditorHeader({
               </AlertDialog>
             )}
             {canEdit && onEdit && (
-              <Button variant="outline" size="icon-sm" onClick={onEdit} title="Edit">
+              <Button variant="ghost" size="icon-sm" onClick={onEdit} title="Edit">
                 <Pencil />
               </Button>
             )}

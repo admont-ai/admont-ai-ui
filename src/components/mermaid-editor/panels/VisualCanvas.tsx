@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  useReactFlow,
+  useNodesInitialized,
   type OnNodesChange,
   type OnEdgesChange,
   type OnConnect,
   type NodeTypes,
   type EdgeTypes,
-  type ReactFlowInstance,
   applyNodeChanges,
   applyEdgeChanges,
   MarkerType,
@@ -40,6 +41,23 @@ const defaultEdgeOptions = {
   markerEnd: { type: MarkerType.ArrowClosed, width: 15, height: 15 },
 }
 
+// Re-fits the viewport whenever the set of nodes changes (the diagram loads
+// after the async parse, or a node is added/removed). The `fitView` prop only
+// fits once on mount — against the default placeholder model — which leaves the
+// real centered layout offset to the left. Rendered inside <ReactFlow> so it
+// can read the store; gated on useNodesInitialized so fitting happens only
+// after the new nodes have measured dimensions (otherwise fitView no-ops).
+function FitViewOnChange({ nodeKey }: { nodeKey: string }) {
+  const { fitView } = useReactFlow()
+  const nodesInitialized = useNodesInitialized()
+  useEffect(() => {
+    if (nodesInitialized && nodeKey) {
+      void fitView({ padding: 0.2 })
+    }
+  }, [nodesInitialized, nodeKey, fitView])
+  return null
+}
+
 interface VisualCanvasProps {
   model: DiagramModel
   dispatch: React.Dispatch<DiagramAction>
@@ -63,23 +81,12 @@ export function VisualCanvas({
     [selectedNodeIds, model.nodes],
   )
 
-  // Re-fit the viewport whenever the set of nodes changes (a diagram loads
-  // after the async parse, or a node is added/removed). The `fitView` prop only
-  // fits once on mount — against the default placeholder model — which leaves
-  // the real centered layout offset to the left until a manual re-fit.
-  const rfRef = useRef<ReactFlowInstance<DiagramNode, DiagramEdge> | null>(null)
+  // Identity of the current node set; changes when a diagram loads or a node is
+  // added/removed (but not when a node is merely dragged), driving a re-fit.
   const nodeKey = useMemo(
     () => model.nodes.map((n) => n.id).join(","),
     [model.nodes],
   )
-  useEffect(() => {
-    if (!nodeKey) return
-    // Defer so React Flow has measured the new nodes before fitting.
-    const raf = requestAnimationFrame(() => {
-      rfRef.current?.fitView({ padding: 0.2 })
-    })
-    return () => cancelAnimationFrame(raf)
-  }, [nodeKey])
 
   // Add default edge type to all edges
   const edgesWithType = useMemo(
@@ -147,12 +154,12 @@ export function VisualCanvas({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onSelectionChange={onSelectionChangeHandler}
-        onInit={(inst) => { rfRef.current = inst }}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         deleteKeyCode="Delete"
         className="bg-gray-50"
       >
+        <FitViewOnChange nodeKey={nodeKey} />
         <Background gap={20} size={1} />
         <Controls showInteractive={false} />
         <MiniMap

@@ -7,6 +7,7 @@ import { authFetch } from "@/lib/auth-fetch"
 import { Button } from "@/components/ui/button"
 import { useDocumentContent } from "@/hooks/use-document-content"
 import { useDocumentSave } from "@/hooks/use-document-save"
+import { useDebouncedAutosave } from "@/hooks/use-debounced-autosave"
 import { fetchFileAtCommit } from "@/hooks/use-file-history"
 import type { DiagramSourceHandle, FileHistoryEntry } from "@/types"
 import { detectDiagramType } from "@/components/mermaid-editor/diagram-detector"
@@ -72,7 +73,13 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
   const rawFileName = filePath.split("/").pop() ?? ""
 
   const { content, lastModified, isDraft, draftUpdatedAt, refetch } = useDocumentContent(repoSlug, filePath)
-  const { save, saving, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
+  const { save, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
+
+  const autosave = useDebouncedAutosave({
+    enabled: editing && canEdit,
+    save,
+    baseline: content ?? "",
+  })
 
   // Initialize code from content. The first load also syncs in edit mode —
   // a freshly created file mounts directly in edit mode and would otherwise
@@ -91,6 +98,12 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
       }
     }
   }, [content, editing])
+
+  // Autosave draft on code change (after the initial content load). The hook's
+  // baseline comparison suppresses no-op changes (init, mode round-trips).
+  useEffect(() => {
+    if (codeInitializedRef.current) autosave.notifyChange(code)
+  }, [code]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Only react to editSignal increments after mount (see DrawioFileEditor).
   const lastEditSignal = useRef(editSignal)
@@ -144,13 +157,10 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     }
   }, [code, editing, renderPreview, editorMode])
 
-  const handleSave = useCallback(async () => {
-    await save(code)
-  }, [save, code])
-
   const handlePublish = useCallback(async () => {
     if (!code.trim()) return
-    // Save draft first
+    // Flush any pending autosave, then persist the current code.
+    await autosave.flush()
     await save(code)
     // Render final SVG
     renderIdRef.current += 1
@@ -169,20 +179,20 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     await publish()
     setEditing(false)
     refetch()
-  }, [code, filePath, rawFileName, save, publish, buildUploadUrl, refetch])
+  }, [code, filePath, rawFileName, save, publish, buildUploadUrl, refetch, autosave])
 
   const handlePublishView = useCallback(async () => {
     await publish()
     refetch()
   }, [publish, refetch])
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = useCallback(async () => {
+    // Edits were autosaved as a draft; flush the last ones before exiting.
+    await autosave.flush()
     setEditing(false)
-    if (content !== null) setCode(content)
-    // Pick up any draft saved during the editing session so the viewer
-    // shows the latest state instead of the stale pre-edit content.
+    // Reload so the viewer shows the latest saved draft.
     refetch()
-  }, [content, refetch])
+  }, [autosave, refetch])
 
   const handleEdit = useCallback(() => {
     if (content != null) setCode(content)
@@ -296,9 +306,8 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
         editing
         isDraft={isDraft}
         lastModified={lastModified}
-        saving={saving}
         publishing={publishing}
-        onSave={handleSave}
+        saveStatus={autosave.status}
         onPublish={handlePublish}
         onCancel={handleCancel}
       >

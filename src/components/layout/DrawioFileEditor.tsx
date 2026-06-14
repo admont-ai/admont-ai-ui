@@ -5,6 +5,7 @@ import { authFetch } from "@/lib/auth-fetch"
 import { Button } from "@/components/ui/button"
 import { useDocumentContent } from "@/hooks/use-document-content"
 import { useDocumentSave } from "@/hooks/use-document-save"
+import { useDebouncedAutosave } from "@/hooks/use-debounced-autosave"
 import { fetchFileAtCommit } from "@/hooks/use-file-history"
 import type { DiagramSourceHandle, FileHistoryEntry } from "@/types"
 import { AiEditBox } from "./AiEditBox"
@@ -12,7 +13,7 @@ import { EditorHeader } from "./EditorHeader"
 import { FileHistoryPanel } from "./FileHistoryPanel"
 
 const DRAWIO_EMBED_URL =
-  "https://embed.diagrams.net/?embed=1&proto=json&spin=1&libraries=1&dark=0&noSaveBtn=1&noExitBtn=1&saveAndExit=0"
+  "https://embed.diagrams.net/?embed=1&proto=json&spin=1&libraries=1&dark=0&noSaveBtn=1&noExitBtn=1&saveAndExit=0&autosave=1"
 
 // Chromeless read-only viewer for view mode — renders the .drawio XML
 // directly, so no SVG companion file is needed for viewing.
@@ -44,7 +45,16 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
   const rawFileName = filePath.split("/").pop() ?? ""
 
   const { content, lastModified, isDraft, draftUpdatedAt, refetch } = useDocumentContent(repoSlug, filePath)
-  const { save, saving, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
+  const { save, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
+
+  const autosave = useDebouncedAutosave({
+    enabled: editing && canEdit,
+    save,
+    baseline: content ?? "",
+  })
+  // Held in a ref so the iframe message listener doesn't resubscribe each render.
+  const autosaveRef = useRef(autosave)
+  autosaveRef.current = autosave
 
   // Keep xmlRef in sync with loaded content. Also fill it while editing as
   // long as it's still empty — when edit mode starts at mount, the content
@@ -148,14 +158,6 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
 
   const [, setPendingPublish] = useState(false)
 
-  const handleSave = useCallback(async () => {
-    // Request XML export from iframe, then save as draft
-    iframeRef.current?.contentWindow?.postMessage(
-      JSON.stringify({ action: "export", format: "xml" }),
-      "https://embed.diagrams.net",
-    )
-  }, [])
-
   const handlePublish = useCallback(async () => {
     // Request XML export, then SVG export, then publish
     setPendingPublish(true)
@@ -209,10 +211,15 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
           JSON.stringify({ action: "load", xml: xmlRef.current || "" }),
           "https://embed.diagrams.net",
         )
-      } else if (msg.event === "save" && msg.xml) {
-        // Ctrl+S inside the iframe
+      } else if (msg.event === "autosave" && msg.xml) {
+        // Diagram changed — debounced draft autosave.
         xmlRef.current = msg.xml
-        save(msg.xml)
+        autosaveRef.current.notifyChange(msg.xml)
+      } else if (msg.event === "save" && msg.xml) {
+        // Ctrl+S inside the iframe — persist immediately.
+        xmlRef.current = msg.xml
+        autosaveRef.current.notifyChange(msg.xml)
+        void autosaveRef.current.flush()
       } else if (msg.event === "export" && msg.format === "xml") {
         xmlRef.current = msg.xml ?? msg.data ?? ""
         save(xmlRef.current)
@@ -337,9 +344,8 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
         editing
         isDraft={isDraft}
         lastModified={lastModified}
-        saving={saving}
         publishing={publishing}
-        onSave={handleSave}
+        saveStatus={autosave.status}
         onPublish={handlePublish}
         onCancel={handleCancel}
       />

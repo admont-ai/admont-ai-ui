@@ -89,7 +89,7 @@ export function SharedMonacoEditor({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 border-b px-2 py-1">
+      <div className="flex items-center gap-1 border-b bg-muted px-2 py-1">
         <Button
           variant={lineNumbers ? "secondary" : "ghost"}
           size="icon-sm"

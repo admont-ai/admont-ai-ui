@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import {
   ReactFlow,
   Background,
@@ -9,6 +9,7 @@ import {
   type OnConnect,
   type NodeTypes,
   type EdgeTypes,
+  type ReactFlowInstance,
   applyNodeChanges,
   applyEdgeChanges,
   MarkerType,
@@ -61,6 +62,24 @@ export function VisualCanvas({
         : undefined,
     [selectedNodeIds, model.nodes],
   )
+
+  // Re-fit the viewport whenever the set of nodes changes (a diagram loads
+  // after the async parse, or a node is added/removed). The `fitView` prop only
+  // fits once on mount — against the default placeholder model — which leaves
+  // the real centered layout offset to the left until a manual re-fit.
+  const rfRef = useRef<ReactFlowInstance<DiagramNode, DiagramEdge> | null>(null)
+  const nodeKey = useMemo(
+    () => model.nodes.map((n) => n.id).join(","),
+    [model.nodes],
+  )
+  useEffect(() => {
+    if (!nodeKey) return
+    // Defer so React Flow has measured the new nodes before fitting.
+    const raf = requestAnimationFrame(() => {
+      rfRef.current?.fitView({ padding: 0.2 })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [nodeKey])
 
   // Add default edge type to all edges
   const edgesWithType = useMemo(
@@ -128,6 +147,7 @@ export function VisualCanvas({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onSelectionChange={onSelectionChangeHandler}
+        onInit={(inst) => { rfRef.current = inst }}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         deleteKeyCode="Delete"

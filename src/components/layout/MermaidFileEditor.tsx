@@ -274,28 +274,31 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     return <p className="px-6 text-muted-foreground">Loading…</p>
   }
 
+  // Visual/Text mode toggle, styled to match the markdown view toggle
+  // (icon-only buttons in the header's right slot).
+  const toggleBtn = "flex size-8 items-center justify-center rounded-md transition-colors disabled:opacity-100"
   const editorToggle = (
-    <div className="flex items-center gap-1">
-      <Button
-        variant={editorMode === "visual" ? "secondary" : "ghost"}
-        size="sm"
+    <div className="flex items-center gap-0.5">
+      <button
+        type="button"
+        title="Visual"
+        aria-label="Visual editor"
         onClick={() => canSwitchToVisual && handleToggleMode()}
         disabled={editorMode === "visual" || !canSwitchToVisual}
-        className="gap-1 text-xs"
+        className={`${toggleBtn} ${editorMode === "visual" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground disabled:text-muted-foreground/40"}`}
       >
-        <Eye className="h-3.5 w-3.5" />
-        Visual
-      </Button>
-      <Button
-        variant={editorMode === "text" ? "secondary" : "ghost"}
-        size="sm"
+        <Eye className="size-4" />
+      </button>
+      <button
+        type="button"
+        title="Text"
+        aria-label="Text editor"
         onClick={handleToggleMode}
         disabled={editorMode === "text"}
-        className="gap-1 text-xs"
+        className={`${toggleBtn} ${editorMode === "text" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"}`}
       >
-        <Code2 className="h-3.5 w-3.5" />
-        Text
-      </Button>
+        <Code2 className="size-4" />
+      </button>
     </div>
   )
 
@@ -310,9 +313,8 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
         saveStatus={autosave.status}
         onPublish={handlePublish}
         onCancel={handleCancel}
-      >
-        {editorToggle}
-      </EditorHeader>
+        rightSlot={editorToggle}
+      />
       <div className="relative min-h-0 flex-1 p-4">
         {editorMode === "visual" && visualDiagramType ? (
           <MermaidVisualEditor

@@ -348,6 +348,7 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
         publishing={publishing}
         saveStatus={autosave.status}
         onPublish={handlePublish}
+        onDiscardDraft={canEdit ? handleDiscardDraft : undefined}
         onCancel={handleCancel}
       />
       <div className="relative min-h-0 flex-1">

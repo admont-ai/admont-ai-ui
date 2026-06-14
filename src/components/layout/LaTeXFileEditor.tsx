@@ -311,6 +311,7 @@ export function LaTeXFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
         publishing={publishing}
         onSave={handleSave}
         onPublish={handlePublish}
+        onDiscardDraft={canEdit ? handleDiscardDraft : undefined}
         onCancel={handleCancel}
       >
         <ModelSelector models={models} loading={modelsLoading} value={selectedModel} onValueChange={setSelectedModel} />

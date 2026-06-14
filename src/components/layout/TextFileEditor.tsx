@@ -205,6 +205,7 @@ export function TextFileEditor({ repoSlug, filePath, canEdit, initialEditing, ed
         publishing={publishing}
         onSave={handleSave}
         onPublish={handlePublish}
+        onDiscardDraft={canEdit ? handleDiscardDraft : undefined}
         onCancel={handleCancel}
       />
       <SharedMonacoEditor

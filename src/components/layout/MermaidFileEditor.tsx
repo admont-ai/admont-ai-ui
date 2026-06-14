@@ -313,6 +313,7 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
         publishing={publishing}
         saveStatus={autosave.status}
         onPublish={handlePublish}
+        onDiscardDraft={canEdit ? handleDiscardDraft : undefined}
         onCancel={handleCancel}
         rightSlot={editorToggle}
       />

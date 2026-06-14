@@ -534,6 +534,7 @@ export function AppLayout() {
                             publishing={publishing}
                             saveStatus={mdAutosave.status}
                             onPublish={handlePublish}
+                            onDiscardDraft={canEdit ? handleDiscardDraft : undefined}
                             onCancel={handleCancel}
                             rightSlot={mdViewState && (
                               <ViewModeToggle

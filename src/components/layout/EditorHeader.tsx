@@ -124,6 +124,7 @@ export function EditorHeader({
                 <Send />
               </Button>
             )}
+            {isDraft && onDiscardDraft && <DiscardDraftButton onDiscardDraft={onDiscardDraft} />}
             {onCancel && (
               <Button variant="ghost" size="icon-sm" onClick={onCancel} title="Cancel">
                 <X />
@@ -148,29 +149,7 @@ export function EditorHeader({
                 <Send />
               </Button>
             )}
-            {isDraft && onDiscardDraft && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon-sm" title="Discard draft">
-                    <Trash2 />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Discard draft?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete your draft and revert to the published version. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction variant="destructive" onClick={onDiscardDraft}>
-                      Discard
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+            {isDraft && onDiscardDraft && <DiscardDraftButton onDiscardDraft={onDiscardDraft} />}
             {canEdit && onEdit && (
               <Button variant="ghost" size="icon-sm" onClick={onEdit} title="Edit">
                 <Pencil />
@@ -317,6 +296,32 @@ function FileInfoDialog({
         </dl>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function DiscardDraftButton({ onDiscardDraft }: { onDiscardDraft: () => void }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" size="icon-sm" title="Discard draft">
+          <Trash2 />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard draft?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete your draft and revert to the published version. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onDiscardDraft}>
+            Discard
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

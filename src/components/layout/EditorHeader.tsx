@@ -82,7 +82,6 @@ export function EditorHeader({
         {children}
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {rightSlot}
         {editing ? (
           <>
             {lastModified && (
@@ -90,6 +89,7 @@ export function EditorHeader({
                 Last modified: {new Date(lastModified).toLocaleString()}
               </time>
             )}
+            {rightSlot}
             {onSave && (
               <Button variant="default" size="icon-sm" onClick={onSave} disabled={saving} title="Save draft">
                 <Save />
@@ -118,6 +118,7 @@ export function EditorHeader({
                 Last modified: {new Date(lastModified).toLocaleString()}
               </time>
             )}
+            {rightSlot}
             {isDraft && onPublish && (
               <Button variant="default" size="icon-sm" onClick={onPublish} title="Publish">
                 <Send />

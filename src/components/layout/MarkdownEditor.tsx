@@ -779,7 +779,7 @@ export const MarkdownEditor = forwardRef<
 
       {/* MDXEditor — hidden via display:none when not rich-text (preserves Lexical state) */}
       <div
-        className="relative min-h-0 flex-1 overflow-y-auto bg-background [&_[role=toolbar]]:flex-wrap [&_[role=toolbar]]:bg-background"
+        className={`relative min-h-0 flex-1 overflow-y-auto bg-background [&_[role=toolbar]]:flex-wrap ${readOnly ? "[&_[role=toolbar]]:bg-muted" : "[&_[role=toolbar]]:bg-background"}`}
         style={{ display: viewMode === "rich-text" ? "flex" : "none", flexDirection: "column" }}
         onClick={handleLinkClick}
       >

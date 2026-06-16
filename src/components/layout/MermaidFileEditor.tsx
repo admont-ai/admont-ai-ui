@@ -16,6 +16,7 @@ import { MermaidVisualEditor } from "@/components/mermaid-editor/MermaidVisualEd
 import { AiEditBox } from "./AiEditBox"
 import { EditorHeader } from "./EditorHeader"
 import { FileHistoryPanel } from "./FileHistoryPanel"
+import { SharedMonacoEditor } from "./SharedMonacoEditor"
 
 mermaid.initialize({
   startOnLoad: false,
@@ -364,14 +365,14 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
           />
         ) : (
           <div className="grid h-full grid-cols-2">
-            <textarea
-              value={code}
-              onChange={(e) => handleTextCodeChange(e.target.value)}
-              spellCheck={false}
-              className="bg-neutral-100 text-foreground border-input h-full w-full resize-none border-r p-3 font-mono text-sm focus-visible:outline-none dark:bg-neutral-800"
-              placeholder="Enter mermaid code..."
-            />
-            <div className="border-input overflow-auto p-3">
+            <div className="flex h-full min-h-0 flex-col border-r">
+              <SharedMonacoEditor
+                language="markdown"
+                value={code}
+                onChange={handleTextCodeChange}
+              />
+            </div>
+            <div className="overflow-auto p-3">
               {previewError ? (
                 <p className="text-destructive text-sm">{previewError}</p>
               ) : previewHtml ? (

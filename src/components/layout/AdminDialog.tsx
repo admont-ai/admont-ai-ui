@@ -191,7 +191,7 @@ export function AdminPanel({
         </button>
       </nav>
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto bg-editor p-6">
         {tab === "internal_users" && canManageUsers ? (
           <InternalUsersTab />
         ) : tab === "external_users" && canManageUsers ? (

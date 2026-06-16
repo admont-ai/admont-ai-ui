@@ -80,6 +80,17 @@ location / {
 }
 ```
 
+## Releasing
+
+Publishing a new version to npm is automated by GitHub Actions ([`.github/workflows/publish.yml`](.github/workflows/publish.yml)) and triggered by pushing a `v*.*.*` tag whose version matches `package.json`.
+
+```sh
+npm version patch   # bumps package.json + creates the matching git tag (use minor/major as needed)
+git push --follow-tags
+```
+
+The tag push runs lint + build and publishes `@admont-ai/ui` to npm.
+
 ## Tech Stack
 
 | Technology | Purpose |

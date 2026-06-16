@@ -51,43 +51,46 @@
 
 :root {
     --radius: 0.625rem;
-    /* Single accent knob: indigo/violet. Shaded surfaces below carry a faint tint
-       at this hue; set chroma back to 0 to return to fully grayscale. */
-    --accent-hue: 265;
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0.013 var(--accent-hue));
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0.013 var(--accent-hue));
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.95 0.025 var(--accent-hue));
-    --accent-foreground: oklch(0.205 0 0);
+    /* Cream light theme: one warm knob. Lower the chroma anywhere (or set to 0)
+       to neutralize; nudge the hue (75 golden, 95 ivory) to taste. */
+    --cream-hue: 85;
+    --background: oklch(0.985 0.016 var(--cream-hue));
+    --foreground: oklch(0.21 0.012 var(--cream-hue));
+    --card: oklch(0.995 0.010 var(--cream-hue));
+    --card-foreground: oklch(0.21 0.012 var(--cream-hue));
+    --popover: oklch(0.995 0.010 var(--cream-hue));
+    --popover-foreground: oklch(0.21 0.012 var(--cream-hue));
+    --primary: oklch(0.27 0.020 var(--cream-hue));
+    --primary-foreground: oklch(0.985 0.012 var(--cream-hue));
+    --secondary: oklch(0.955 0.022 var(--cream-hue));
+    --secondary-foreground: oklch(0.27 0.020 var(--cream-hue));
+    --muted: oklch(0.955 0.022 var(--cream-hue));
+    --muted-foreground: oklch(0.50 0.015 var(--cream-hue));
+    --accent: oklch(0.93 0.030 var(--cream-hue));
+    --accent-foreground: oklch(0.27 0.020 var(--cream-hue));
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.916 0.014 var(--accent-hue));
-    --input: oklch(0.916 0.014 var(--accent-hue));
-    --ring: oklch(0.708 0 0);
+    --border: oklch(0.90 0.025 var(--cream-hue));
+    --input: oklch(0.90 0.025 var(--cream-hue));
+    --ring: oklch(0.70 0.025 var(--cream-hue));
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
-    --sidebar: oklch(0.985 0.006 var(--accent-hue));
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.95 0.025 var(--accent-hue));
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.916 0.014 var(--accent-hue));
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar: oklch(0.965 0.022 var(--cream-hue));
+    --sidebar-foreground: oklch(0.21 0.012 var(--cream-hue));
+    --sidebar-primary: oklch(0.27 0.020 var(--cream-hue));
+    --sidebar-primary-foreground: oklch(0.985 0.012 var(--cream-hue));
+    --sidebar-accent: oklch(0.93 0.030 var(--cream-hue));
+    --sidebar-accent-foreground: oklch(0.27 0.020 var(--cream-hue));
+    --sidebar-border: oklch(0.90 0.025 var(--cream-hue));
+    --sidebar-ring: oklch(0.70 0.025 var(--cream-hue));
 }
 
 .dark {
+    /* Dark mode keeps the cool indigo-tinted shaded surfaces (unaffected by the
+       cream light theme above). */
+    --accent-hue: 265;
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);

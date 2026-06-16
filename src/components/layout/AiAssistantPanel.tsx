@@ -349,7 +349,7 @@ export function AiAssistantPanel({
   const activeConv = conversations.find((c) => c.id === activeConversationId)
 
   return (
-    <div className="flex h-full flex-col bg-muted">
+    <div className="flex h-full flex-col bg-background">
       {/* Header with conversation selector */}
       <div className="flex items-center justify-between px-4 py-1.5 border-b">
         <div className="flex items-center gap-2 min-w-0">

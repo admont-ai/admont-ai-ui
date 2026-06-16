@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Check, Copy, EllipsisVertical, FileDown, FilePenLine, History, Info, Pencil, Save, Send, Trash2, TriangleAlert, X } from "lucide-react"
+import { Check, Copy, EllipsisVertical, FileDown, FilePenLine, History, Info, Pencil, Save, Send, Trash2, TriangleAlert, Undo2, X } from "lucide-react"
 import type { AutosaveStatus } from "@/hooks/use-debounced-autosave"
 import {
   AlertDialog,
@@ -304,7 +304,7 @@ function DiscardDraftButton({ onDiscardDraft }: { onDiscardDraft: () => void }) 
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button variant="ghost" size="icon-sm" title="Discard draft">
-          <Trash2 />
+          <Undo2 />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

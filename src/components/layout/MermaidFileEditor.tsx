@@ -354,7 +354,7 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
         onCancel={handleCancel}
         rightSlot={editorToggle}
       />
-      <div className="relative min-h-0 flex-1 p-4">
+      <div className="relative min-h-0 flex-1">
         {editorMode === "visual" && visualDiagramType ? (
           <MermaidVisualEditor
             key={visualEditorKey}
@@ -363,15 +363,15 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
             onCodeChange={handleVisualCodeChange}
           />
         ) : (
-          <div className="grid h-full grid-cols-2 gap-4">
+          <div className="grid h-full grid-cols-2">
             <textarea
               value={code}
               onChange={(e) => handleTextCodeChange(e.target.value)}
               spellCheck={false}
-              className="bg-muted text-foreground border-input h-full w-full resize-none rounded-md border p-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="bg-neutral-100 text-foreground border-input h-full w-full resize-none border-r p-3 font-mono text-sm focus-visible:outline-none dark:bg-neutral-800"
               placeholder="Enter mermaid code..."
             />
-            <div className="border-input overflow-auto rounded-md border p-3">
+            <div className="border-input overflow-auto p-3">
               {previewError ? (
                 <p className="text-destructive text-sm">{previewError}</p>
               ) : previewHtml ? (

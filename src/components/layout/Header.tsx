@@ -1,6 +1,7 @@
 import type { RefObject } from "react"
 import type { PanelImperativeHandle } from "react-resizable-panels"
-import { Check, ClipboardCopy, Cpu, Loader2, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Settings, Shield, ShieldCheck, ShieldOff, Sparkles } from "lucide-react"
+import { Check, ClipboardCopy, Cpu, KeyRound, Loader2, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Plus, Settings, Shield, ShieldCheck, ShieldOff, Sparkles, Trash2 } from "lucide-react"
+import { startRegistration } from "@simplewebauthn/browser"
 import { useCallback, useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,7 @@ export function Header({
   const [collapsed, setCollapsed] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [totpDialogOpen, setTotpDialogOpen] = useState(false)
+  const [passkeysDialogOpen, setPasskeysDialogOpen] = useState(false)
   const { user, permissions, logout } = useAuth()
   const { models, selectedModel, setSelectedModel } = useAiLog()
 
@@ -191,6 +193,14 @@ export function Header({
                       <Shield className="size-3.5" />
                       Two-Factor Authentication
                     </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                      onClick={() => setPasskeysDialogOpen(true)}
+                    >
+                      <KeyRound className="size-3.5" />
+                      Passkeys
+                    </button>
                   </div>
                 )}
               </PopoverContent>
@@ -213,6 +223,9 @@ export function Header({
     )}
     {totpDialogOpen && (
       <TotpDialog open={totpDialogOpen} onOpenChange={setTotpDialogOpen} />
+    )}
+    {passkeysDialogOpen && (
+      <PasskeysDialog open={passkeysDialogOpen} onOpenChange={setPasskeysDialogOpen} />
     )}
   </>
   )
@@ -708,6 +721,210 @@ function TotpDialog({
             </DialogFooter>
           </div>
         )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+interface Passkey {
+  id: number
+  name: string
+  created_at: string
+  last_used_at?: string
+}
+
+function PasskeysDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const inputClass =
+    "border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+  const [passkeys, setPasskeys] = useState<Passkey[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+  const [newName, setNewName] = useState("")
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editName, setEditName] = useState("")
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const res = await authFetch("/me/webauthn/credentials")
+      const data = (await res.json().catch(() => ({}))) as { error?: string; passkeys?: Passkey[] }
+      if (!res.ok) throw new Error(data.error ?? "Failed to load passkeys")
+      setPasskeys(data.passkeys ?? [])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load passkeys")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (open) void load()
+  }, [open, load])
+
+  async function addPasskey() {
+    setError("")
+    setBusy(true)
+    try {
+      const beginRes = await authFetch("/me/webauthn/register/begin", { method: "POST" })
+      const begin = (await beginRes.json().catch(() => ({}))) as {
+        error?: string
+        session_id?: string
+        options?: { publicKey: Parameters<typeof startRegistration>[0]["optionsJSON"] }
+      }
+      if (!beginRes.ok || !begin.options || !begin.session_id) {
+        throw new Error(begin.error ?? "Could not start registration")
+      }
+      const attestation = await startRegistration({ optionsJSON: begin.options.publicKey })
+      const name = newName.trim() || "Passkey"
+      const url = `/me/webauthn/register/finish?session_id=${encodeURIComponent(begin.session_id)}&name=${encodeURIComponent(name)}`
+      const res = await authFetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(attestation),
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) throw new Error(data.error ?? "Could not register passkey")
+      setNewName("")
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Registration was cancelled or failed")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveRename(id: number) {
+    const name = editName.trim()
+    if (!name) return
+    setError("")
+    try {
+      const res = await authFetch(`/me/webauthn/credentials/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      })
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(data.error ?? "Could not rename passkey")
+      }
+      setEditingId(null)
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not rename passkey")
+    }
+  }
+
+  async function remove(id: number) {
+    setError("")
+    try {
+      const res = await authFetch(`/me/webauthn/credentials/${id}`, { method: "DELETE" })
+      if (!res.ok && res.status !== 204) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(data.error ?? "Could not delete passkey")
+      }
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete passkey")
+    }
+  }
+
+  function formatDate(s?: string): string {
+    if (!s) return "never"
+    const d = new Date(s)
+    return isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <KeyRound className="size-4" />
+            Passkeys
+          </DialogTitle>
+        </DialogHeader>
+
+        <p className="text-sm text-muted-foreground">
+          Passkeys let you sign in with your device biometrics or PIN. A passkey counts as
+          two-factor authentication, so you won't be asked for a code.
+        </p>
+
+        {loading ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {passkeys.length === 0 && (
+              <p className="text-sm text-muted-foreground py-2">No passkeys registered yet.</p>
+            )}
+            {passkeys.map((pk) => (
+              <div key={pk.id} className="flex items-center gap-2 rounded-md border px-3 py-2">
+                {editingId === pk.id ? (
+                  <>
+                    <input
+                      className={inputClass}
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      autoFocus
+                      onKeyDown={(e) => { if (e.key === "Enter") void saveRename(pk.id) }}
+                    />
+                    <Button size="sm" onClick={() => void saveRename(pk.id)}>Save</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        className="block truncate text-sm font-medium hover:underline"
+                        title="Rename"
+                        onClick={() => { setEditingId(pk.id); setEditName(pk.name) }}
+                      >
+                        {pk.name}
+                      </button>
+                      <p className="text-xs text-muted-foreground">
+                        Added {formatDate(pk.created_at)} · Last used {formatDate(pk.last_used_at)}
+                      </p>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Delete passkey"
+                      onClick={() => void remove(pk.id)}
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <div className="flex items-center gap-2 border-t pt-3">
+          <input
+            className={inputClass}
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Passkey name (e.g. MacBook)"
+            disabled={busy}
+          />
+          <Button onClick={addPasskey} disabled={busy} className="gap-1 shrink-0">
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+            Add
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   )

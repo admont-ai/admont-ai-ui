@@ -9,6 +9,8 @@ import {
 } from "react"
 
 import { toast } from "sonner"
+import { startAuthentication } from "@simplewebauthn/browser"
+import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser"
 
 import { authFetch, clearAuthToken, getAuthToken, getRefreshToken, setAuthToken, setRefreshToken } from "@/lib/auth-fetch"
 import { providerFromIssuer } from "@/components/ui/provider-icon"
@@ -46,6 +48,7 @@ interface AuthContextValue {
   signupOpen: boolean
   login: (provider?: string) => void
   loginInternal: (username: string, password: string) => Promise<InternalLoginResult>
+  loginPasskey: () => Promise<void>
   verifyTotp: (pendingToken: string, code: string) => Promise<void>
   signup: (username: string, password: string, firstName: string, lastName: string) => Promise<void>
   logout: () => void
@@ -296,6 +299,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applySession],
   )
 
+  // Passkey (WebAuthn) login: discoverable/usernameless. A user-verified
+  // passkey is multi-factor, so this logs in directly without a TOTP step.
+  const loginPasskey = useCallback(async () => {
+    const beginRes = await fetch("/auth/internal/webauthn/login/begin", { method: "POST" })
+    const begin = (await beginRes.json().catch(() => ({}))) as {
+      error?: string
+      session_id?: string
+      options?: { publicKey: PublicKeyCredentialRequestOptionsJSON }
+    }
+    if (!beginRes.ok || !begin.options || !begin.session_id) {
+      throw new Error(begin.error ?? "Passkey sign-in is unavailable")
+    }
+    const assertion = await startAuthentication({ optionsJSON: begin.options.publicKey })
+    const res = await fetch(
+      `/auth/internal/webauthn/login/finish?session_id=${encodeURIComponent(begin.session_id)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(assertion),
+      },
+    )
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string
+      token?: string
+      refresh_token?: string
+    }
+    if (!res.ok) throw new Error(data.error ?? "Passkey sign-in failed")
+    applySession(data.token!, data.refresh_token)
+  }, [applySession])
+
   const signup = useCallback(
     async (username: string, password: string, firstName: string, lastName: string) => {
       const res = await fetch("/auth/internal/signup", {
@@ -395,11 +428,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signupOpen,
       login,
       loginInternal,
+      loginPasskey,
       verifyTotp,
       signup,
       logout,
     }),
-    [user, permissions, isLoading, providers, signupOpen, login, loginInternal, verifyTotp, signup, logout],
+    [user, permissions, isLoading, providers, signupOpen, login, loginInternal, loginPasskey, verifyTotp, signup, logout],
   )
 
   return (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2, KeyRound } from "lucide-react"
+import { browserSupportsWebAuthn } from "@simplewebauthn/browser"
 
 import { Button } from "@/components/ui/button"
 import { ProviderIcon } from "@/components/ui/provider-icon"
@@ -11,7 +12,7 @@ const inputClass =
 type Mode = "login" | "totp" | "signup"
 
 export function LoginPanel() {
-  const { providers, signupOpen, login, loginInternal, verifyTotp, signup } = useAuth()
+  const { providers, signupOpen, login, loginInternal, loginPasskey, verifyTotp, signup } = useAuth()
   const [mode, setMode] = useState<Mode>("login")
   const [username, setUsername] = useState("")
 
@@ -45,6 +46,18 @@ export function LoginPanel() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function passkeySignIn() {
+    setError("")
+    setBusy(true)
+    try {
+      await loginPasskey()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Passkey sign-in failed")
     } finally {
       setBusy(false)
     }
@@ -119,6 +132,13 @@ export function LoginPanel() {
             {isSignup ? "Create account" : mode === "totp" ? "Verify" : "Sign in"}
           </Button>
         </form>
+
+        {mode === "login" && !isSignup && browserSupportsWebAuthn() && (
+          <Button type="button" variant="outline" className="w-full gap-2" disabled={busy} onClick={passkeySignIn}>
+            <KeyRound className="size-4" />
+            Sign in with a passkey
+          </Button>
+        )}
 
         {isSignup && !busy && (
           <button type="button" className="block mx-auto text-muted-foreground hover:text-foreground text-xs" onClick={() => { setError(""); setMode("login") }}>

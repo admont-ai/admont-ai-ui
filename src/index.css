@@ -18,6 +18,7 @@
     --radius-4xl: calc(var(--radius) + 16px);
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    --color-editor: var(--editor);
     --color-card: var(--card);
     --color-card-foreground: var(--card-foreground);
     --color-popover: var(--popover);
@@ -54,6 +55,9 @@
     /* Cream light theme: one warm knob. Lower the chroma anywhere (or set to 0)
        to neutralize; nudge the hue (75 golden, 95 ivory) to taste. */
     --cream-hue: 85;
+    /* The center document/editor surface stays pure white (the cream is only on
+       the surrounding chrome). */
+    --editor: oklch(1 0 0);
     --background: oklch(0.985 0.016 var(--cream-hue));
     --foreground: oklch(0.21 0.012 var(--cream-hue));
     --card: oklch(0.995 0.010 var(--cream-hue));
@@ -91,6 +95,7 @@
     /* Dark mode keeps the cool indigo-tinted shaded surfaces (unaffected by the
        cream light theme above). */
     --accent-hue: 265;
+    --editor: var(--background);
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);

@@ -373,7 +373,7 @@ export function ViewModeToggle({
   viewMode,
   onChange,
   showDiff,
-  className = "flex items-center gap-0.5 border-b bg-background px-2 py-1",
+  className = "flex items-center gap-0.5 border-b bg-editor px-2 py-1",
 }: {
   viewMode: ViewMode
   onChange: (mode: ViewMode) => void
@@ -781,7 +781,7 @@ export const MarkdownEditor = forwardRef<
 
       {/* MDXEditor — hidden via display:none when not rich-text (preserves Lexical state) */}
       <div
-        className={`relative min-h-0 flex-1 overflow-y-auto bg-background [&_[role=toolbar]]:flex-wrap ${readOnly ? "[&_[role=toolbar]]:!bg-muted" : "[&_[role=toolbar]]:bg-background"}`}
+        className={`relative min-h-0 flex-1 overflow-y-auto bg-editor [&_[role=toolbar]]:flex-wrap ${readOnly ? "[&_[role=toolbar]]:!bg-muted" : "[&_[role=toolbar]]:bg-editor"}`}
         style={{ display: viewMode === "rich-text" ? "flex" : "none", flexDirection: "column" }}
         onClick={handleLinkClick}
       >

@@ -364,7 +364,7 @@ function InternalUsersTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {!showAddForm ? (
         <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
           <Plus className="size-4" />
@@ -711,7 +711,7 @@ function ExternalUsersTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {!showAddForm ? (
         <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
           <Plus className="size-4" />
@@ -1168,7 +1168,7 @@ function GroupsTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {!showAddForm ? (
         <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
           <Plus className="size-4" />
@@ -1553,7 +1553,7 @@ function ReposTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Add repo */}
       {!showAddForm ? (
         <Button variant="outline" size="sm" onClick={() => { setShowAddForm(true); setSelectedRepoSlug(null) }}>
@@ -2257,7 +2257,7 @@ function AuthProvidersTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Add provider */}
       {!showAddForm ? (
         <>
@@ -2785,7 +2785,7 @@ function LlmProvidersTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Add provider */}
       {!showAddForm ? (
         <>
@@ -3366,7 +3366,7 @@ function SearchProvidersTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Add provider */}
       {!showAddForm ? (
         <>

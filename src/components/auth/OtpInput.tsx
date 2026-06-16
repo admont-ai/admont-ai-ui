@@ -95,7 +95,7 @@ export function OtpInput({ length = 6, onComplete, disabled, autoFocus = true }:
           onKeyDown={(e) => handleKeyDown(i, e)}
           onFocus={(e) => e.target.select()}
           aria-label={`Digit ${i + 1}`}
-          className="size-11 rounded-md border border-input bg-background text-center text-lg font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+          className="size-11 rounded-md border border-input bg-transparent text-center text-lg font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
         />
       ))}
     </div>

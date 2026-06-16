@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { describePasswordPolicy, getPasswordPolicy } from "@/lib/password-policy"
 
 const inputClass =
-  "border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+  "border-input bg-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
 
 type Mode = "login" | "totp" | "reset" | "signup"
 

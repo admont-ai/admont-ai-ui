@@ -158,7 +158,7 @@ export function AiDialog({ editorRef }: AiDialogProps) {
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="Describe what content to generate..."
                   rows={4}
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full resize-none rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  className="border-input bg-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full resize-none rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 />
               </div>
             ) : (
@@ -179,7 +179,7 @@ export function AiDialog({ editorRef }: AiDialogProps) {
                     onChange={(e) => setInstructions(e.target.value)}
                     placeholder="E.g., make it more concise, fix grammar..."
                     rows={3}
-                    className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full resize-none rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="border-input bg-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full resize-none rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                   />
                 </div>
               </>

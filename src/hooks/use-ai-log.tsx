@@ -73,13 +73,14 @@ export function AiLogProvider({ children }: { children: ReactNode }) {
         return res.json() as Promise<AiModel[]>
       })
       .then((data) => {
-        setModels(data)
-        setAiAvailable(data.length > 0)
+        const list = Array.isArray(data) ? data : []
+        setModels(list)
+        setAiAvailable(list.length > 0)
         const saved = localStorage.getItem(STORAGE_KEY_MODEL)
-        if (saved && data.some((m) => m.id === saved)) {
+        if (saved && list.some((m) => m.id === saved)) {
           setSelectedModelState(saved)
-        } else if (data.length > 0) {
-          setSelectedModelState(data[0].id)
+        } else if (list.length > 0) {
+          setSelectedModelState(list[0].id)
         }
       })
       .catch((err: Error) => console.error("[llm/models] error:", err.message))

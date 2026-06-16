@@ -59,7 +59,7 @@ export function useDocumentContent(
     authFetch(`${base}/fileinfo/${filePath}`, { signal })
       .then((res) => {
         if (!res.ok) throw new Error(res.status === 404 ? "File not found." : `Failed to fetch file info: ${res.status}`)
-        return res.json().then((data) => { console.log("[fileinfo]", filePath, data); return data as FileInfo })
+        return res.json().then((data) => data as FileInfo)
       })
       .then((info) => {
         if (signal?.aborted) return
@@ -98,5 +98,12 @@ export function useDocumentContent(
     return () => controller.abort()
   }, [fetchDocument])
 
-  return { content, lastModified, isDraft, draftUpdatedAt, permission, fileInfo, loading, error, refetch: fetchDocument }
+  // markDraftSaved optimistically reflects that a draft now exists (e.g. after
+  // an autosave) so draft controls appear without refetching the document.
+  const markDraftSaved = useCallback((updatedAt?: string) => {
+    setIsDraft(true)
+    setDraftUpdatedAt(updatedAt ?? new Date().toISOString())
+  }, [])
+
+  return { content, lastModified, isDraft, draftUpdatedAt, permission, fileInfo, loading, error, refetch: fetchDocument, markDraftSaved }
 }

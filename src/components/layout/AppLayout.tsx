@@ -171,7 +171,7 @@ export function AppLayout() {
     return () => window.removeEventListener("popstate", onPopState)
   }, [])
 
-  const { content, lastModified, isDraft, draftUpdatedAt, permission: filePermission, fileInfo, error: contentError, refetch } = useDocumentContent(
+  const { content, lastModified, isDraft, draftUpdatedAt, permission: filePermission, fileInfo, error: contentError, refetch, markDraftSaved } = useDocumentContent(
     selectedRepoSlug,
     selectedFilePath
   )
@@ -194,11 +194,18 @@ export function AppLayout() {
     selectedFilePath
   )
 
+  // Persist a draft and immediately reflect that one exists, so the discard /
+  // publish controls appear as soon as the first autosave lands.
+  const saveDraft = useCallback(async (markdown: string) => {
+    await save(markdown)
+    markDraftSaved()
+  }, [save, markDraftSaved])
+
   // Debounced autosave for the markdown editor: drafts persist automatically
   // while editing, so there is no manual save-draft button.
   const mdAutosave = useDebouncedAutosave({
     enabled: editing && canEdit && isMarkdownFile(selectedFilePath),
-    save,
+    save: saveDraft,
     baseline: restoredMarkdown ?? content ?? "",
   })
 

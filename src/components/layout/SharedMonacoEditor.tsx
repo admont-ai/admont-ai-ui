@@ -89,7 +89,7 @@ export function SharedMonacoEditor({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 border-b bg-neutral-100 px-2 py-1 dark:bg-neutral-800">
+      <div className="flex items-center gap-1 border-b bg-neutral-100 px-2 py-1 dark:bg-neutral-800 [&_button:hover]:bg-neutral-200 dark:[&_button:hover]:bg-neutral-700">
         <Button
           variant="ghost"
           size="icon-sm"

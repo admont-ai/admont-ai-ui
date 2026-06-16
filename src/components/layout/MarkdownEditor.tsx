@@ -270,7 +270,7 @@ function SearchToolbar() {
         ref={buttonRef}
         type="button"
         title="Find and replace"
-        className={`pointer-events-auto flex items-center justify-center rounded p-1.5 transition-colors [&_svg]:size-4 ${isSearchOpen ? "text-foreground bg-accent" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"}`}
+        className={`pointer-events-auto flex items-center justify-center rounded p-1.5 transition-colors [&_svg]:size-4 ${isSearchOpen ? "text-foreground bg-neutral-200 dark:bg-neutral-700" : "text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700"}`}
         onClick={() => isSearchOpen ? (closeSearch(), setSearch(null)) : openSearch()}
       >
         <Search />
@@ -293,16 +293,16 @@ function SearchToolbar() {
         <span className="text-xs text-muted-foreground tabular-nums shrink-0 w-12 text-center">
           {search ? `${cursor}/${total}` : ""}
         </span>
-        <button type="button" title="Previous" onClick={prev} disabled={!total} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-30 [&_svg]:size-3.5">
+        <button type="button" title="Previous" onClick={prev} disabled={!total} className="rounded p-1 text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30 [&_svg]:size-3.5">
           <ArrowUp />
         </button>
-        <button type="button" title="Next" onClick={next} disabled={!total} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-30 [&_svg]:size-3.5">
+        <button type="button" title="Next" onClick={next} disabled={!total} className="rounded p-1 text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30 [&_svg]:size-3.5">
           <ArrowDown />
         </button>
-        <button type="button" title="Toggle replace" onClick={() => setShowReplace(!showReplace)} className={`rounded p-1 transition-colors [&_svg]:size-3.5 ${showReplace ? "text-foreground bg-accent" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"}`}>
+        <button type="button" title="Toggle replace" onClick={() => setShowReplace(!showReplace)} className={`rounded p-1 transition-colors [&_svg]:size-3.5 ${showReplace ? "text-foreground bg-neutral-200 dark:bg-neutral-700" : "text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700"}`}>
           <Replace />
         </button>
-        <button type="button" title="Close" onClick={() => { closeSearch(); setSearch(null) }} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground [&_svg]:size-3.5">
+        <button type="button" title="Close" onClick={() => { closeSearch(); setSearch(null) }} className="rounded p-1 text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700 [&_svg]:size-3.5">
           <X />
         </button>
       </div>
@@ -319,10 +319,10 @@ function SearchToolbar() {
             placeholder="Replace…"
             className="flex-1 min-w-0 rounded border bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          <button type="button" title="Replace" onClick={() => replaceOne(replaceText)} disabled={!total} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-30">
+          <button type="button" title="Replace" onClick={() => replaceOne(replaceText)} disabled={!total} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30">
             Replace
           </button>
-          <button type="button" title="Replace all" onClick={() => replaceAll(replaceText)} disabled={!total} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-30">
+          <button type="button" title="Replace all" onClick={() => replaceAll(replaceText)} disabled={!total} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30">
             All
           </button>
         </div>
@@ -340,7 +340,7 @@ function InsertTocButton({ editorRef }: { editorRef: React.RefObject<MDXEditorMe
     <button
       type="button"
       title="Insert table of contents"
-      className="flex items-center justify-center rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground [&_svg]:size-4"
+      className="flex items-center justify-center rounded p-1.5 text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700 [&_svg]:size-4"
       onClick={() => {
         const editor = editorRef.current
         if (!editor) return
@@ -399,8 +399,8 @@ export function ViewModeToggle({
           aria-label={m.label}
           className={`flex size-8 items-center justify-center rounded-md transition-colors ${
             viewMode === m.value
-              ? "bg-accent text-accent-foreground"
-              : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              ? "bg-neutral-200 text-foreground dark:bg-neutral-700"
+              : "text-muted-foreground hover:bg-neutral-200/70 dark:hover:bg-neutral-700/70"
           }`}
         >
           {m.icon}
@@ -918,7 +918,7 @@ export const MarkdownEditor = forwardRef<
                               <button
                                 type="button"
                                 title="Insert link"
-                                className="flex items-center justify-center rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground [&_svg]:size-4"
+                                className="flex items-center justify-center rounded p-1.5 text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700 [&_svg]:size-4"
                                 onClick={() => {
                                   const editor = lexicalEditorRef.current
                                   let selText = ""

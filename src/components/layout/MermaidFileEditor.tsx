@@ -323,7 +323,7 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
         aria-label="Visual editor"
         onClick={() => canSwitchToVisual && handleToggleMode()}
         disabled={editorMode === "visual" || !canSwitchToVisual}
-        className={`${toggleBtn} ${editorMode === "visual" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground disabled:text-muted-foreground/40"}`}
+        className={`${toggleBtn} ${editorMode === "visual" ? "bg-neutral-200 text-foreground dark:bg-neutral-700" : "text-muted-foreground hover:bg-neutral-200/70 dark:hover:bg-neutral-700/70 disabled:text-muted-foreground/40"}`}
       >
         <Eye className="size-4" />
       </button>
@@ -333,7 +333,7 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
         aria-label="Text editor"
         onClick={handleToggleMode}
         disabled={editorMode === "text"}
-        className={`${toggleBtn} ${editorMode === "text" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"}`}
+        className={`${toggleBtn} ${editorMode === "text" ? "bg-neutral-200 text-foreground dark:bg-neutral-700" : "text-muted-foreground hover:bg-neutral-200/70 dark:hover:bg-neutral-700/70"}`}
       >
         <Code2 className="size-4" />
       </button>

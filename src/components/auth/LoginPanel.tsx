@@ -106,7 +106,7 @@ export function LoginPanel() {
 
   return (
     <div className="flex h-full items-start justify-center px-6 pt-[15vh]">
-      <div className="w-full max-w-sm space-y-6">
+      <div className="w-full max-w-xs space-y-6">
         <div className="text-center space-y-2">
           <img src="/admont-ai-icon.png" alt="" width="48" height="48" className="mx-auto rounded-lg" />
           <h2 className="text-2xl font-bold">{title}</h2>

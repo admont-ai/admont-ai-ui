@@ -115,7 +115,7 @@ export function DiagramToolbar({
   const hasSelection = selectedNodeIds.length > 0 || selectedEdgeIds.length > 0
 
   return (
-    <div className="flex items-center gap-1 border-b border-gray-200 bg-gray-50 px-2 py-1">
+    <div className="flex items-center gap-1 border-b border-gray-200 bg-gray-50 px-2 py-1 [&_button:hover]:bg-neutral-200 dark:[&_button:hover]:bg-neutral-700">
       <Button
         type="button"
         variant="ghost"
@@ -135,11 +135,11 @@ export function DiagramToolbar({
           <Button
             key={value}
             type="button"
-            variant={model.direction === value ? "secondary" : "ghost"}
+            variant="ghost"
             size="icon-sm"
             title={label}
             onClick={() => handleDirectionChange(value)}
-            className="h-7 w-7"
+            className={"h-7 w-7" + (model.direction === value ? " bg-neutral-200 dark:bg-neutral-700" : "")}
           >
             <Icon className="h-3.5 w-3.5" />
           </Button>

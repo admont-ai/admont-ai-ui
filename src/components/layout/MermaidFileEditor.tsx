@@ -72,12 +72,19 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
   const renderIdRef = useRef(0)
   const rawFileName = filePath.split("/").pop() ?? ""
 
-  const { content, lastModified, isDraft, draftUpdatedAt, refetch } = useDocumentContent(repoSlug, filePath)
+  const { content, lastModified, isDraft, draftUpdatedAt, refetch, markDraftSaved } = useDocumentContent(repoSlug, filePath)
   const { save, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
+
+  // Persist a draft and immediately reflect that one exists, so the discard /
+  // publish controls appear as soon as the first autosave lands.
+  const saveDraft = useCallback(async (code: string) => {
+    await save(code)
+    markDraftSaved()
+  }, [save, markDraftSaved])
 
   const autosave = useDebouncedAutosave({
     enabled: editing && canEdit,
-    save,
+    save: saveDraft,
     baseline: content ?? "",
   })
 
@@ -285,12 +292,13 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
     setCode(diffOldContent)
     // Persisted directly here, so it is already the clean baseline.
     save(diffOldContent)
+    markDraftSaved()
     autosave.markClean(diffOldContent)
     visualBaselineCleanRef.current = true
     setSelectedCommit(null)
     setDiffOldContent(null)
     setEditing(true)
-  }, [selectedCommit, diffOldContent, save, autosave])
+  }, [selectedCommit, diffOldContent, save, markDraftSaved, autosave])
 
   const handleCloseDiff = useCallback(() => {
     setSelectedCommit(null)

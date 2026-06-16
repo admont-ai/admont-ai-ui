@@ -44,12 +44,19 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
 
   const rawFileName = filePath.split("/").pop() ?? ""
 
-  const { content, lastModified, isDraft, draftUpdatedAt, refetch } = useDocumentContent(repoSlug, filePath)
+  const { content, lastModified, isDraft, draftUpdatedAt, refetch, markDraftSaved } = useDocumentContent(repoSlug, filePath)
   const { save, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
+
+  // Persist a draft and immediately reflect that one exists, so the discard /
+  // publish controls appear as soon as the first autosave lands.
+  const saveDraft = useCallback(async (xml: string) => {
+    await save(xml)
+    markDraftSaved()
+  }, [save, markDraftSaved])
 
   const autosave = useDebouncedAutosave({
     enabled: editing && canEdit,
-    save,
+    save: saveDraft,
     baseline: content ?? "",
   })
   // Held in a ref so the iframe message listener doesn't resubscribe each render.
@@ -222,7 +229,7 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
         void autosaveRef.current.flush()
       } else if (msg.event === "export" && msg.format === "xml") {
         xmlRef.current = msg.xml ?? msg.data ?? ""
-        save(xmlRef.current)
+        void saveDraft(xmlRef.current)
         // If publishing, continue to SVG export
         setPendingPublish((prev) => {
           if (prev) {
@@ -320,7 +327,7 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
     fetchFileAtCommit(repoSlug, filePath, selectedCommit.commit_hash)
       .then((oldContent) => {
         xmlRef.current = oldContent
-        save(oldContent)
+        void saveDraft(oldContent)
         setSelectedCommit(null)
         setDiffOldSvg(null)
         setEditing(true)

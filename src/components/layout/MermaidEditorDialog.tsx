@@ -322,7 +322,7 @@ export function MermaidEditorDialog({
         size="icon-sm"
         title="Mermaid Diagram"
         onClick={handleOpen}
-        className="[&_svg]:size-4"
+        className="[&_svg]:size-4 hover:bg-neutral-200 dark:hover:bg-neutral-700"
       >
         <Workflow />
       </Button>

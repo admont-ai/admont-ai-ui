@@ -464,8 +464,8 @@ function InternalUsersTab() {
       <div className="border rounded-md overflow-x-auto">
         <table className="w-full text-xs whitespace-nowrap">
           <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="sticky left-0 bg-muted/50 pl-1.5 pr-0.5 py-1.5 w-[52px]" />
+            <tr className="border-b bg-neutral-100 dark:bg-neutral-800">
+              <th className="sticky left-0 bg-neutral-100 dark:bg-neutral-800 pl-1.5 pr-0.5 py-1.5 w-[52px]" />
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Username</th>
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">First Name</th>
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Last Name</th>
@@ -488,8 +488,8 @@ function InternalUsersTab() {
               </tr>
             ) : (
               users.map((user) => (
-                <tr key={user.email} className="hover:bg-muted/30">
-                  <td className="sticky left-0 bg-background pl-1.5 pr-0.5 py-1.5">
+                <tr key={user.email} className="hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                  <td className="sticky left-0 bg-editor pl-1.5 pr-0.5 py-1.5">
                     <div className="flex items-center gap-0">
                       <Button variant="ghost" size="icon-xs" onClick={() => startEdit(user)}>
                         <Pencil />
@@ -801,8 +801,8 @@ function ExternalUsersTab() {
       <div className="border rounded-md overflow-x-auto">
         <table className="w-full text-xs whitespace-nowrap">
           <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="sticky left-0 bg-muted/50 pl-1.5 pr-0.5 py-1.5 w-[52px]" />
+            <tr className="border-b bg-neutral-100 dark:bg-neutral-800">
+              <th className="sticky left-0 bg-neutral-100 dark:bg-neutral-800 pl-1.5 pr-0.5 py-1.5 w-[52px]" />
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Provider</th>
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Email</th>
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">First Name</th>
@@ -825,8 +825,8 @@ function ExternalUsersTab() {
               users.map((user) => {
                 const key = userKey(user)
                 return (
-                  <tr key={key} className="hover:bg-muted/30">
-                    <td className="sticky left-0 bg-background pl-1.5 pr-0.5 py-1.5">
+                  <tr key={key} className="hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                    <td className="sticky left-0 bg-editor pl-1.5 pr-0.5 py-1.5">
                       <div className="flex items-center gap-0">
                         {user.status === "pending" && (
                           <Button variant="ghost" size="icon-xs" title="Approve" disabled={approvingKey === key} onClick={() => handleApproveUser(user)}>
@@ -1007,7 +1007,7 @@ function UserSelector({
             <button
               key={u.identity}
               type="button"
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent text-left"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left"
               onClick={() => { onAdd(u.identity); setQuery(""); setOpen(false) }}
             >
               <ProviderIcon provider={u.provider} className="size-3.5 shrink-0" />
@@ -1245,8 +1245,8 @@ function GroupsTab() {
       <div className="border rounded-md overflow-x-auto">
         <table className="w-full text-xs whitespace-nowrap">
           <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="sticky left-0 bg-muted/50 pl-1.5 pr-0.5 py-1.5 w-[52px]" />
+            <tr className="border-b bg-neutral-100 dark:bg-neutral-800">
+              <th className="sticky left-0 bg-neutral-100 dark:bg-neutral-800 pl-1.5 pr-0.5 py-1.5 w-[52px]" />
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Name</th>
               <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Description</th>
               <th className="px-3 py-1.5 text-center font-medium text-muted-foreground">Members</th>
@@ -1262,8 +1262,8 @@ function GroupsTab() {
               </tr>
             ) : (
               groups.map((group) => (
-                <tr key={group.name} className="hover:bg-muted/30">
-                  <td className="sticky left-0 bg-background pl-1.5 pr-0.5 py-1.5">
+                <tr key={group.name} className="hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                  <td className="sticky left-0 bg-editor pl-1.5 pr-0.5 py-1.5">
                     <div className="flex items-center gap-0">
                       <Button variant="ghost" size="icon-xs" onClick={() => startEdit(group)}>
                         <Pencil />
@@ -1706,11 +1706,11 @@ function ReposTab() {
                       )}
                       {repo.doc_path && <p>Doc path: {repo.doc_path}</p>}
                       <div className="flex flex-wrap gap-1.5 mt-1">
-                        <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium", repo.public_access ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" : "bg-muted text-muted-foreground")}>{repo.public_access ? "Public" : "Private"}</span>
-                        <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium", repo.read_only ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" : "bg-muted text-muted-foreground")}>{repo.read_only ? "Read Only" : "Read/Write"}</span>
+                        <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium", repo.public_access ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300")}>{repo.public_access ? "Public" : "Private"}</span>
+                        <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium", repo.read_only ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300")}>{repo.read_only ? "Read Only" : "Read/Write"}</span>
                         {repo.authenticated && <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">Authenticated</span>}
-                        {repo.lfs_enabled && <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">LFS</span>}
-                        {repo.search_provider && <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Search: {repo.search_provider}</span>}
+                        {repo.lfs_enabled && <span className="inline-flex items-center rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">LFS</span>}
+                        {repo.search_provider && <span className="inline-flex items-center rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Search: {repo.search_provider}</span>}
                       </div>
                     </div>
                   </div>
@@ -1965,7 +1965,7 @@ function RepoSettingsForm({
               onClick={() => setAuthenticated(!authenticated)}
               className={cn(
                 "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors",
-                authenticated ? "bg-primary" : "bg-muted",
+                authenticated ? "bg-primary" : "bg-neutral-300 dark:bg-neutral-600",
               )}
             >
               <span className={cn(
@@ -3431,7 +3431,7 @@ function SearchProvidersTab() {
                   onClick={() => setNewField("external_db", newFields.external_db === "true" ? "false" : "true")}
                   className={cn(
                     "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors",
-                    newFields.external_db === "true" ? "bg-primary" : "bg-muted",
+                    newFields.external_db === "true" ? "bg-primary" : "bg-neutral-300 dark:bg-neutral-600",
                   )}
                 >
                   <span className={cn(
@@ -3462,7 +3462,7 @@ function SearchProvidersTab() {
                       onClick={() => setNewField("ssl_enabled", newFields.ssl_enabled === "true" ? "false" : "true")}
                       className={cn(
                         "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors",
-                        newFields.ssl_enabled === "true" ? "bg-primary" : "bg-muted",
+                        newFields.ssl_enabled === "true" ? "bg-primary" : "bg-neutral-300 dark:bg-neutral-600",
                       )}
                     >
                       <span className={cn(
@@ -3561,7 +3561,7 @@ function SearchProvidersTab() {
                             onClick={() => setEditField("external_db", editFields.external_db === "true" ? "false" : "true")}
                             className={cn(
                               "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors",
-                              editFields.external_db === "true" ? "bg-primary" : "bg-muted",
+                              editFields.external_db === "true" ? "bg-primary" : "bg-neutral-300 dark:bg-neutral-600",
                             )}
                           >
                             <span className={cn(
@@ -3592,7 +3592,7 @@ function SearchProvidersTab() {
                                 onClick={() => setEditField("ssl_enabled", editFields.ssl_enabled === "true" ? "false" : "true")}
                                 className={cn(
                                   "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors",
-                                  editFields.ssl_enabled === "true" ? "bg-primary" : "bg-muted",
+                                  editFields.ssl_enabled === "true" ? "bg-primary" : "bg-neutral-300 dark:bg-neutral-600",
                                 )}
                               >
                                 <span className={cn(

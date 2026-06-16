@@ -478,7 +478,7 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
 
   return (
     <div className="flex -mt-3" style={{ height: "calc(100% + 0.75rem)" }}>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 bg-editor">
         {mainContent}
       </div>
       {historyOpen && (

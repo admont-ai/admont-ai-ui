@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ProviderIcon } from "@/components/ui/provider-icon"
+import { OtpInput } from "@/components/auth/OtpInput"
 import { useAuth } from "@/contexts/auth-context"
 import { describePasswordPolicy, getPasswordPolicy } from "@/lib/password-policy"
 
@@ -33,6 +34,8 @@ export function LoginDialog({
   const [lastName, setLastName] = useState("")
   const [code, setCode] = useState("")
   const [pendingToken, setPendingToken] = useState("")
+  const [totpRecovery, setTotpRecovery] = useState(false)
+  const [otpKey, setOtpKey] = useState(0)
   const [resetToken, setResetToken] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [policyHint, setPolicyHint] = useState("")
@@ -50,8 +53,36 @@ export function LoginDialog({
     onOpenChange(false)
   }
 
+  async function handleTotp(value: string) {
+    const codeVal = value.trim()
+    if (!codeVal || busy) return
+    setError("")
+    setBusy(true)
+    try {
+      const res = await verifyTotp(pendingToken, codeVal)
+      if (res.passwordResetRequired) {
+        setResetToken(res.resetToken ?? "")
+        setPassword("")
+        setConfirmPassword("")
+        setMode("reset")
+      } else {
+        close()
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+      setCode("")
+      setOtpKey((k) => k + 1)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (mode === "totp") {
+      await handleTotp(code)
+      return
+    }
     setError("")
     setBusy(true)
     try {
@@ -65,21 +96,13 @@ export function LoginDialog({
         }
         await resetPassword(resetToken, password)
         close()
-      } else if (mode === "totp") {
-        const res = await verifyTotp(pendingToken, code.trim())
-        if (res.passwordResetRequired) {
-          setResetToken(res.resetToken ?? "")
-          setPassword("")
-          setConfirmPassword("")
-          setMode("reset")
-        } else {
-          close()
-        }
       } else {
         const res = await loginInternal(email, password)
         if (res.totpRequired) {
           setPendingToken(res.pendingToken ?? "")
           setCode("")
+          setTotpRecovery(false)
+          setOtpKey((k) => k + 1)
           setMode("totp")
         } else if (res.passwordResetRequired) {
           setResetToken(res.resetToken ?? "")
@@ -127,16 +150,25 @@ export function LoginDialog({
           )}
 
           {mode === "totp" ? (
-            <input
-              type="text"
-              inputMode="text"
-              autoComplete="one-time-code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Authenticator or recovery code"
-              className={inputClass}
-              autoFocus
-            />
+            <>
+              <p className="text-muted-foreground text-sm">
+                {totpRecovery ? "Enter one of your recovery codes." : "Enter the 6-digit code from your authenticator app."}
+              </p>
+              {totpRecovery ? (
+                <input
+                  type="text"
+                  inputMode="text"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="Recovery code"
+                  className={inputClass}
+                  autoFocus
+                />
+              ) : (
+                <OtpInput key={otpKey} onComplete={handleTotp} disabled={busy} />
+              )}
+            </>
           ) : mode === "reset" ? (
             <>
               <p className="text-muted-foreground text-sm">
@@ -192,10 +224,28 @@ export function LoginDialog({
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <Button type="submit" className="w-full" disabled={busy}>
-            {busy && <Loader2 className="size-4 mr-2 animate-spin" />}
-            {mode === "signup" ? "Create account" : mode === "totp" ? "Verify" : mode === "reset" ? "Set new password" : "Sign in"}
-          </Button>
+          {mode === "totp" && !totpRecovery && busy && (
+            <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Verifying…
+            </p>
+          )}
+
+          {!(mode === "totp" && !totpRecovery) && (
+            <Button type="submit" className="w-full" disabled={busy}>
+              {busy && <Loader2 className="size-4 mr-2 animate-spin" />}
+              {mode === "signup" ? "Create account" : mode === "totp" ? "Verify" : mode === "reset" ? "Set new password" : "Sign in"}
+            </Button>
+          )}
+
+          {mode === "totp" && (
+            <button
+              type="button"
+              className="block mx-auto text-muted-foreground hover:text-foreground text-xs"
+              onClick={() => { setError(""); setCode(""); setOtpKey((k) => k + 1); setTotpRecovery((v) => !v) }}
+            >
+              {totpRecovery ? "Use your authenticator app" : "Enter a recovery code instead"}
+            </button>
+          )}
         </form>
 
         {mode === "login" && browserSupportsWebAuthn() && (

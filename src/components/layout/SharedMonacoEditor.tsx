@@ -91,9 +91,10 @@ export function SharedMonacoEditor({
       {/* Toolbar */}
       <div className="flex items-center gap-1 border-b bg-neutral-100 px-2 py-1 dark:bg-neutral-800">
         <Button
-          variant={lineNumbers ? "secondary" : "ghost"}
+          variant="ghost"
           size="icon-sm"
           title="Line numbers"
+          className={lineNumbers ? "bg-neutral-200 dark:bg-neutral-700" : ""}
           onClick={() => {
             const next = !lineNumbers
             setLineNumbers(next)
@@ -103,9 +104,10 @@ export function SharedMonacoEditor({
           <Hash className="h-4 w-4" />
         </Button>
         <Button
-          variant={wordWrap ? "secondary" : "ghost"}
+          variant="ghost"
           size="icon-sm"
           title="Word wrap"
+          className={wordWrap ? "bg-neutral-200 dark:bg-neutral-700" : ""}
           onClick={() => {
             const next = !wordWrap
             setWordWrap(next)

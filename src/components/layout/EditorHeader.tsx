@@ -90,7 +90,7 @@ export function EditorHeader({
     )
   }
   return (
-    <header className="flex items-center justify-between border-b bg-background pl-6 pr-3 py-1.5">
+    <header className="flex items-center justify-between border-b bg-background pl-6 pr-3 py-1.5 [&_button:hover]:bg-neutral-200 dark:[&_button:hover]:bg-neutral-700">
       <div className="flex items-center gap-2 truncate">
         <h2 className="text-sm font-normal truncate" title={filePath ?? fileName}>{(filePath ?? fileName).replace(/\//g, " / ")}</h2>
         <Button variant="ghost" size="icon-xs" className="shrink-0 text-muted-foreground" onClick={copyPath} title={copied ? "Copied!" : "Copy path"}>

@@ -14,8 +14,8 @@ function LogEntry({ entry }: { entry: AiLogEntry }) {
         <span className={
           "mt-0.5 inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium " +
           (entry.action === "generate"
-            ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-            : "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300")
+            ? "bg-teal-primary text-teal-foreground"
+            : "bg-teal-light text-teal-primary")
         }>
           {entry.action}
         </span>
@@ -62,7 +62,7 @@ export function AiLogPanel({ onCollapse }: AiLogPanelProps) {
     <div className="flex h-full flex-col">
       <div className="border-b flex items-center justify-between px-4 py-1.5">
         <div className="flex items-center gap-2">
-          <Sparkles className="text-muted-foreground h-4 w-4" />
+          <Sparkles className="text-teal-primary h-4 w-4" />
           <span className="text-sm font-medium">AI Log</span>
           {entries.length > 0 && (
             <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-xs">

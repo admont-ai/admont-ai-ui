@@ -133,7 +133,7 @@ export function Header({
               onAiAssistant()
             }}
           >
-            <Sparkles className="size-4" />
+            <Sparkles className="size-4 text-teal-primary" />
           </Button>
         )}
         {user ? (

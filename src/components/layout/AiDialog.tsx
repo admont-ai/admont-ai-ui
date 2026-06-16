@@ -135,7 +135,7 @@ export function AiDialog({ editorRef }: AiDialogProps) {
         }}
         className="[&_svg]:size-4"
       >
-        <Sparkles />
+        <Sparkles className="text-teal-primary" />
       </Button>
 
       <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -190,7 +190,7 @@ export function AiDialog({ editorRef }: AiDialogProps) {
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={!canSubmit || loading}>
+            <Button variant="ai" onClick={handleSubmit} disabled={!canSubmit || loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {loading
                 ? mode === "generate" ? "Generating..." : "Polishing..."

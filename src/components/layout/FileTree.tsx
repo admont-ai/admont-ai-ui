@@ -370,7 +370,7 @@ function TreeNode({
                 data-tree-path={currentPath}
                 className={cn(
                   "flex w-full min-w-0 items-center gap-1.5 rounded-sm px-1.5 py-1 text-sm",
-                  (isFolderSelected || isMultiSelected) && "bg-neutral-600 text-white font-medium dark:bg-neutral-500",
+                  (isFolderSelected || isMultiSelected) && "bg-teal-primary text-teal-foreground font-medium",
                   dropZone === "inside" && "bg-primary/10",
                 )}
                 style={{ paddingLeft: `${depth * 12 + 6}px` }}
@@ -396,7 +396,7 @@ function TreeNode({
                 className={cn(
                   "flex w-full min-w-0 items-center gap-1.5 rounded-sm px-1.5 py-1 text-sm no-underline",
                   "text-muted-foreground",
-                  (isSelected || isMultiSelected) && "bg-neutral-600 text-white font-medium dark:bg-neutral-500",
+                  (isSelected || isMultiSelected) && "bg-teal-primary text-teal-foreground font-medium",
                 )}
                 style={{ paddingLeft: `${depth * 12 + 6}px` }}
                 onClick={(e) => {

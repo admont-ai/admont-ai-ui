@@ -178,6 +178,7 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
     return (
       <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2">
         <Button
+          variant="ai"
           size="icon"
           className="size-10 rounded-full shadow-lg"
           title="AI edit"
@@ -227,7 +228,7 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || loading}
-              className="flex size-7 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-30"
+              className="flex size-7 items-center justify-center rounded-lg bg-teal-primary text-teal-foreground transition-opacity hover:bg-teal-hover disabled:opacity-30"
               title="Apply"
             >
               {loading ? <Loader2 className="size-3.5 animate-spin" /> : <ArrowUp className="size-3.5" />}
@@ -240,7 +241,7 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
               <button
                 key={tool.action}
                 onClick={() => handleQuickAction(tool.action)}
-                className="flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs text-muted-foreground transition-colors hover:border-teal-primary/40 hover:bg-teal-light hover:text-teal-primary"
               >
                 <tool.icon className="size-3" />
                 {tool.label}

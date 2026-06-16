@@ -225,7 +225,7 @@ export function AiAssistantDialog({
           <Button variant="outline" onClick={handleClose}>
             {mode === "ask" && response ? "Close" : "Cancel"}
           </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit || loading}>
+          <Button variant="ai" onClick={handleSubmit} disabled={!canSubmit || loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {loading ? loadingLabel : modeLabel}
           </Button>

@@ -349,11 +349,11 @@ export function AiAssistantPanel({
   const activeConv = conversations.find((c) => c.id === activeConversationId)
 
   return (
-    <div className="flex h-full flex-col bg-muted">
+    <div className="flex h-full flex-col bg-ai-panel">
       {/* Header with conversation selector */}
       <div className="flex items-center justify-between px-4 py-1.5 border-b">
         <div className="flex items-center gap-2 min-w-0">
-          <Sparkles className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Sparkles className="h-4 w-4 text-teal-primary shrink-0" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-1 text-sm font-medium truncate hover:text-foreground/80">
@@ -374,7 +374,7 @@ export function AiAssistantPanel({
                   className="flex items-center justify-between group"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm truncate">{conv.title || "Untitled"}</div>
+                    <div className={"text-sm truncate" + (conv.id === activeConversationId ? " text-teal-primary font-medium" : "")}>{conv.title || "Untitled"}</div>
                     <div className="text-[10px] text-muted-foreground">{relativeTime(conv.updated_at)}</div>
                   </div>
                   <button
@@ -416,7 +416,7 @@ export function AiAssistantPanel({
                 <button
                   key={i}
                   onClick={() => handleSuggestionClick(s.text)}
-                  className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-teal-light hover:text-teal-primary"
                 >
                   <s.icon className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{s.text}</span>
@@ -460,7 +460,7 @@ export function AiAssistantPanel({
                 className={
                   "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors " +
                   (mode === m
-                    ? "bg-foreground text-background"
+                    ? "bg-teal-primary text-teal-foreground"
                     : "text-muted-foreground hover:text-foreground")
                 }
               >
@@ -476,7 +476,7 @@ export function AiAssistantPanel({
               <button
                 key={tool.label}
                 onClick={() => handleQuickTool(tool)}
-                className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:border-teal-primary/40 hover:bg-teal-light hover:text-teal-primary"
               >
                 <tool.icon className="h-3 w-3" />
                 {tool.label}
@@ -526,7 +526,7 @@ export function AiAssistantPanel({
             <button
               onClick={() => handleSubmit()}
               disabled={!canSubmit || loading}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-30"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-primary text-teal-foreground transition-opacity hover:bg-teal-hover disabled:opacity-30"
             >
               {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
             </button>
@@ -564,7 +564,7 @@ function ChatMessage({ message, onNavigate }: { message: AiMessage; onNavigate?:
   return (
     <div className="px-4 py-2">
       <div className="flex items-center gap-1.5 mb-1">
-        <Sparkles className="h-3 w-3 text-muted-foreground" />
+        <Sparkles className="h-3 w-3 text-teal-primary" />
         <span className="text-[10px] font-medium text-muted-foreground">Assistant</span>
         <span className="text-[10px] text-muted-foreground">{formatTime(message.created_at)}</span>
         {message.token_usage && (

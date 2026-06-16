@@ -19,6 +19,12 @@
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-editor: var(--editor);
+    /* Single brand accent (teal), reserved for AI + branded selection. */
+    --color-teal-primary: var(--teal-primary);
+    --color-teal-hover: var(--teal-hover);
+    --color-teal-light: var(--teal-light);
+    --color-teal-foreground: var(--teal-foreground);
+    --color-ai-panel: var(--ai-panel);
     --color-card: var(--card);
     --color-card-foreground: var(--card-foreground);
     --color-popover: var(--popover);
@@ -58,6 +64,13 @@
     /* The center document/editor surface stays pure white (the cream is only on
        the surrounding chrome). */
     --editor: oklch(1 0 0);
+    /* Teal brand accent (AI + branded selection). --teal-foreground is the text
+       color on a solid teal fill; it flips per theme so contrast always holds. */
+    --teal-primary: #0F766E;
+    --teal-hover: #0D9488;
+    --teal-light: #E6F4F2;
+    --teal-foreground: #ffffff;
+    --ai-panel: #F2F8F7;
     --background: oklch(0.985 0.016 var(--cream-hue));
     --foreground: oklch(0.21 0.012 var(--cream-hue));
     --card: oklch(0.995 0.010 var(--cream-hue));
@@ -96,6 +109,13 @@
        cream light theme above). */
     --accent-hue: 265;
     --editor: var(--background);
+    /* Teal is brighter on dark so it reads as an accent; the solid-fill text
+       color flips to dark for contrast on the bright teal. */
+    --teal-primary: #2DD4BF;
+    --teal-hover: #5EEAD4;
+    --teal-light: oklch(0.32 0.045 185);
+    --teal-foreground: oklch(0.18 0.02 185);
+    --ai-panel: oklch(0.21 0.018 185);
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);

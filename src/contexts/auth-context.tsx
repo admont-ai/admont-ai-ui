@@ -37,6 +37,8 @@ export interface AuthProvider {
 export interface InternalLoginResult {
   totpRequired: boolean
   pendingToken?: string
+  passwordResetRequired?: boolean
+  resetToken?: string
 }
 
 interface AuthContextValue {
@@ -49,7 +51,8 @@ interface AuthContextValue {
   login: (provider?: string) => void
   loginInternal: (username: string, password: string) => Promise<InternalLoginResult>
   loginPasskey: () => Promise<void>
-  verifyTotp: (pendingToken: string, code: string) => Promise<void>
+  verifyTotp: (pendingToken: string, code: string) => Promise<InternalLoginResult>
+  resetPassword: (resetToken: string, newPassword: string) => Promise<void>
   signup: (username: string, password: string, firstName: string, lastName: string) => Promise<void>
   logout: () => void
 }
@@ -268,12 +271,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error?: string
         totp_required?: boolean
         pending_token?: string
+        password_reset_required?: boolean
+        reset_token?: string
         token?: string
         refresh_token?: string
       }
       if (!res.ok) throw new Error(data.error ?? "Login failed")
       if (data.totp_required) {
         return { totpRequired: true, pendingToken: data.pending_token }
+      }
+      if (data.password_reset_required) {
+        return { totpRequired: false, passwordResetRequired: true, resetToken: data.reset_token }
       }
       applySession(data.token!, data.refresh_token)
       return { totpRequired: false }
@@ -282,7 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const verifyTotp = useCallback(
-    async (pendingToken: string, code: string) => {
+    async (pendingToken: string, code: string): Promise<InternalLoginResult> => {
       const res = await fetch("/auth/internal/totp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -290,10 +298,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       const data = (await res.json().catch(() => ({}))) as {
         error?: string
+        password_reset_required?: boolean
+        reset_token?: string
         token?: string
         refresh_token?: string
       }
       if (!res.ok) throw new Error(data.error ?? "Verification failed")
+      if (data.password_reset_required) {
+        return { totpRequired: false, passwordResetRequired: true, resetToken: data.reset_token }
+      }
+      applySession(data.token!, data.refresh_token)
+      return { totpRequired: false }
+    },
+    [applySession],
+  )
+
+  // Complete a forced password reset (expired password) and log in.
+  const resetPassword = useCallback(
+    async (resetToken: string, newPassword: string) => {
+      const res = await fetch("/auth/internal/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reset_token: resetToken, new_password: newPassword }),
+      })
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string
+        token?: string
+        refresh_token?: string
+      }
+      if (!res.ok) throw new Error(data.error ?? "Password reset failed")
       applySession(data.token!, data.refresh_token)
     },
     [applySession],
@@ -430,10 +463,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginInternal,
       loginPasskey,
       verifyTotp,
+      resetPassword,
       signup,
       logout,
     }),
-    [user, permissions, isLoading, providers, signupOpen, login, loginInternal, loginPasskey, verifyTotp, signup, logout],
+    [user, permissions, isLoading, providers, signupOpen, login, loginInternal, loginPasskey, verifyTotp, resetPassword, signup, logout],
   )
 
   return (

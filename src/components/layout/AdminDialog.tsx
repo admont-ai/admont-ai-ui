@@ -403,6 +403,9 @@ function InternalUsersTab() {
               className={inputClass}
             />
           </div>
+          <p className="text-xs text-muted-foreground">
+            This is a temporary password — the user must set a new one at their first login.
+          </p>
           <RoleCheckboxes roles={newRoles} onChange={setNewRoles} superAdmin={newSuperAdmin} onSuperAdminChange={setNewSuperAdmin} />
           <div className="flex gap-2">
             <Button
@@ -438,6 +441,11 @@ function InternalUsersTab() {
               <input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} placeholder="Leave blank to keep current" className={inputClass} />
             </LabeledField>
           </div>
+          {editPassword && (
+            <p className="text-xs text-muted-foreground">
+              Resetting the password signs the user out and forces them to set a new one at next login.
+            </p>
+          )}
           <RoleCheckboxes roles={editRoles} onChange={setEditRoles} superAdmin={editSuperAdmin} onSuperAdminChange={setEditSuperAdmin} />
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={editSuspended} onChange={(e) => setEditSuspended(e.target.checked)} />

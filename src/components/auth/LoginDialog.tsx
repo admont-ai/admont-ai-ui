@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Loader2, KeyRound } from "lucide-react"
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser"
 
@@ -11,11 +11,12 @@ import {
 } from "@/components/ui/dialog"
 import { ProviderIcon } from "@/components/ui/provider-icon"
 import { useAuth } from "@/contexts/auth-context"
+import { describePasswordPolicy, getPasswordPolicy } from "@/lib/password-policy"
 
 const inputClass =
   "border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
 
-type Mode = "login" | "totp" | "signup"
+type Mode = "login" | "totp" | "reset" | "signup"
 
 export function LoginDialog({
   open,
@@ -24,7 +25,7 @@ export function LoginDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const { providers, signupOpen, login, loginInternal, loginPasskey, verifyTotp, signup } = useAuth()
+  const { providers, signupOpen, login, loginInternal, loginPasskey, verifyTotp, resetPassword, signup } = useAuth()
   const [mode, setMode] = useState<Mode>(signupOpen ? "signup" : "login")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -32,8 +33,15 @@ export function LoginDialog({
   const [lastName, setLastName] = useState("")
   const [code, setCode] = useState("")
   const [pendingToken, setPendingToken] = useState("")
+  const [resetToken, setResetToken] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [policyHint, setPolicyHint] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+
+  useEffect(() => {
+    void getPasswordPolicy().then((p) => { if (p) setPolicyHint(describePasswordPolicy(p)) })
+  }, [])
 
   function close() {
     setPassword("")
@@ -50,15 +58,34 @@ export function LoginDialog({
       if (mode === "signup") {
         await signup(email, password, firstName, lastName)
         close()
-      } else if (mode === "totp") {
-        await verifyTotp(pendingToken, code.trim())
+      } else if (mode === "reset") {
+        if (password !== confirmPassword) {
+          setError("Passwords do not match.")
+          return
+        }
+        await resetPassword(resetToken, password)
         close()
+      } else if (mode === "totp") {
+        const res = await verifyTotp(pendingToken, code.trim())
+        if (res.passwordResetRequired) {
+          setResetToken(res.resetToken ?? "")
+          setPassword("")
+          setConfirmPassword("")
+          setMode("reset")
+        } else {
+          close()
+        }
       } else {
         const res = await loginInternal(email, password)
         if (res.totpRequired) {
           setPendingToken(res.pendingToken ?? "")
           setCode("")
           setMode("totp")
+        } else if (res.passwordResetRequired) {
+          setResetToken(res.resetToken ?? "")
+          setPassword("")
+          setConfirmPassword("")
+          setMode("reset")
         } else {
           close()
         }
@@ -83,7 +110,7 @@ export function LoginDialog({
     }
   }
 
-  const title = mode === "signup" ? "Create admin account" : mode === "totp" ? "Two-factor authentication" : "Sign in"
+  const title = mode === "signup" ? "Create admin account" : mode === "totp" ? "Two-factor authentication" : mode === "reset" ? "Set a new password" : "Sign in"
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) close() }}>
@@ -110,6 +137,30 @@ export function LoginDialog({
               className={inputClass}
               autoFocus
             />
+          ) : mode === "reset" ? (
+            <>
+              <p className="text-muted-foreground text-sm">
+                Your password has expired and must be changed before continuing.
+              </p>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="New password"
+                className={inputClass}
+                autoFocus
+                required
+              />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className={inputClass}
+                required
+              />
+              {policyHint && <p className="text-xs text-muted-foreground">{policyHint}</p>}
+            </>
           ) : (
             <>
               {mode === "signup" && (
@@ -143,7 +194,7 @@ export function LoginDialog({
 
           <Button type="submit" className="w-full" disabled={busy}>
             {busy && <Loader2 className="size-4 mr-2 animate-spin" />}
-            {mode === "signup" ? "Create account" : mode === "totp" ? "Verify" : "Sign in"}
+            {mode === "signup" ? "Create account" : mode === "totp" ? "Verify" : mode === "reset" ? "Set new password" : "Sign in"}
           </Button>
         </form>
 

@@ -5,14 +5,15 @@ import { browserSupportsWebAuthn } from "@simplewebauthn/browser"
 import { Button } from "@/components/ui/button"
 import { ProviderIcon } from "@/components/ui/provider-icon"
 import { useAuth } from "@/contexts/auth-context"
+import { describePasswordPolicy, getPasswordPolicy } from "@/lib/password-policy"
 
 const inputClass =
   "border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
 
-type Mode = "login" | "totp" | "signup"
+type Mode = "login" | "totp" | "reset" | "signup"
 
 export function LoginPanel() {
-  const { providers, signupOpen, login, loginInternal, loginPasskey, verifyTotp, signup } = useAuth()
+  const { providers, signupOpen, login, loginInternal, loginPasskey, verifyTotp, resetPassword, signup } = useAuth()
   const [mode, setMode] = useState<Mode>("login")
   const [username, setUsername] = useState("")
 
@@ -24,8 +25,15 @@ export function LoginPanel() {
   const [lastName, setLastName] = useState("")
   const [code, setCode] = useState("")
   const [pendingToken, setPendingToken] = useState("")
+  const [resetToken, setResetToken] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [policyHint, setPolicyHint] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+
+  useEffect(() => {
+    void getPasswordPolicy().then((p) => { if (p) setPolicyHint(describePasswordPolicy(p)) })
+  }, [])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -34,14 +42,31 @@ export function LoginPanel() {
     try {
       if (mode === "signup") {
         await signup(username, password, firstName, lastName)
+      } else if (mode === "reset") {
+        if (password !== confirmPassword) {
+          setError("Passwords do not match.")
+          return
+        }
+        await resetPassword(resetToken, password)
       } else if (mode === "totp") {
-        await verifyTotp(pendingToken, code.trim())
+        const res = await verifyTotp(pendingToken, code.trim())
+        if (res.passwordResetRequired) {
+          setResetToken(res.resetToken ?? "")
+          setPassword("")
+          setConfirmPassword("")
+          setMode("reset")
+        }
       } else {
         const res = await loginInternal(username, password)
         if (res.totpRequired) {
           setPendingToken(res.pendingToken ?? "")
           setCode("")
           setMode("totp")
+        } else if (res.passwordResetRequired) {
+          setResetToken(res.resetToken ?? "")
+          setPassword("")
+          setConfirmPassword("")
+          setMode("reset")
         }
       }
     } catch (err) {
@@ -69,11 +94,15 @@ export function LoginPanel() {
     ? "Create admin account"
     : mode === "totp"
       ? "Two-factor authentication"
-      : "Sign in"
+      : mode === "reset"
+        ? "Set a new password"
+        : "Sign in"
 
   const subtitle = isSignup
     ? "No users exist yet. Create the first administrator account."
-    : "Sign in to access your document repositories."
+    : mode === "reset"
+      ? "Your password has expired and must be changed before continuing."
+      : "Sign in to access your document repositories."
 
   return (
     <div className="flex h-full items-start justify-center px-6 pt-[15vh]">
@@ -96,6 +125,27 @@ export function LoginPanel() {
               className={inputClass}
               autoFocus
             />
+          ) : mode === "reset" ? (
+            <>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="New password"
+                className={inputClass}
+                autoFocus
+                required
+              />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className={inputClass}
+                required
+              />
+              {policyHint && <p className="text-xs text-muted-foreground">{policyHint}</p>}
+            </>
           ) : (
             <>
               {isSignup && (
@@ -119,9 +169,9 @@ export function LoginPanel() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 className={inputClass}
-                minLength={isSignup ? 8 : undefined}
                 required
               />
+              {isSignup && policyHint && <p className="text-xs text-muted-foreground">{policyHint}</p>}
             </>
           )}
 
@@ -129,7 +179,7 @@ export function LoginPanel() {
 
           <Button type="submit" className="w-full" disabled={busy}>
             {busy && <Loader2 className="size-4 mr-2 animate-spin" />}
-            {isSignup ? "Create account" : mode === "totp" ? "Verify" : "Sign in"}
+            {isSignup ? "Create account" : mode === "totp" ? "Verify" : mode === "reset" ? "Set new password" : "Sign in"}
           </Button>
         </form>
 

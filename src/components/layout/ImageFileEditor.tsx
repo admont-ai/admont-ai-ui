@@ -12,10 +12,10 @@ function ZoomControls() {
   const btn = "flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
   return (
     <div className="absolute right-3 top-3 z-10 flex flex-col gap-1">
-      <button className={btn} title="Zoom in" onClick={() => zoomIn()}>
+      <button className={btn} title="Zoom in" onClick={() => zoomIn(0.2)}>
         <ZoomIn className="size-3.5" />
       </button>
-      <button className={btn} title="Zoom out" onClick={() => zoomOut()}>
+      <button className={btn} title="Zoom out" onClick={() => zoomOut(0.2)}>
         <ZoomOut className="size-3.5" />
       </button>
       <button className={btn} title="Reset zoom" onClick={() => resetTransform()}>
@@ -241,7 +241,7 @@ export function ImageFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {blobUrl && (
-          <TransformWrapper minScale={0.2} maxScale={8} wheel={{ step: 0.1 }} centerOnInit>
+          <TransformWrapper minScale={0.2} maxScale={8} wheel={{ step: 0.04 }} centerOnInit>
             <ZoomControls />
             <TransformComponent
               wrapperStyle={{ width: "100%", height: "100%", cursor: "grab" }}

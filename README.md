@@ -108,12 +108,18 @@ The tag push runs lint + build and publishes `@admont-ai/ui` to npm.
 
 ```
 src/
+├── App.tsx           # Root component (auth + layout providers)
+├── main.tsx          # Entry point
+├── index.css         # Tailwind v4 theme tokens + global styles
+├── types.ts          # Shared TypeScript types
 ├── components/
-│   ├── layout/       # Page-level components (editors, sidebar, dialogs, panels)
-│   └── ui/           # shadcn/ui base components
+│   ├── auth/             # Login, signup, passkeys, TOTP/OTP
+│   ├── layout/           # Page-level UI: editors, sidebar, header, dialogs, panels
+│   ├── mermaid-editor/   # Visual Mermaid diagram editor (nodes, edges, panels, adapters)
+│   └── ui/               # shadcn/ui base components
 ├── contexts/         # React context providers (auth)
-├── hooks/            # Custom hooks (API calls, document state, AI)
-├── lib/              # Utilities (auth-fetch, PDF export, Monaco config)
+├── hooks/            # Custom hooks (document state, autosave, AI, permissions)
+├── lib/              # Utilities (auth-fetch, Monaco config/theme, PDF export, password policy)
 └── plugins/          # MDXEditor plugins (math, video)
 ```
 

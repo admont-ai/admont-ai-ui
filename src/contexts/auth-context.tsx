@@ -12,7 +12,7 @@ import { toast } from "sonner"
 import { startAuthentication } from "@simplewebauthn/browser"
 import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser"
 
-import { authFetch, clearAuthToken, getAuthToken, getRefreshToken, setAuthToken, setRefreshToken } from "@/lib/auth-fetch"
+import { apiUrl, authFetch, clearAuthToken, getAuthToken, getRefreshToken, setAuthToken, setRefreshToken } from "@/lib/auth-fetch"
 import { providerFromIssuer } from "@/components/ui/provider-icon"
 
 interface User {
@@ -221,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
     try {
-      const res = await fetch("/auth/refresh", {
+      const res = await fetch(apiUrl("/auth/refresh"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token: rt }),
@@ -253,7 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (provider) {
       url += `&provider=${encodeURIComponent(provider)}`
     }
-    const res = await fetch(url)
+    const res = await fetch(apiUrl(url))
     if (!res.ok) throw new Error("login is not available")
     const data = (await res.json()) as { auth_url: string }
     window.location.href = data.auth_url
@@ -262,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Native internal login: returns {totpRequired} or applies the session.
   const loginInternal = useCallback(
     async (username: string, password: string): Promise<InternalLoginResult> => {
-      const res = await fetch("/auth/internal/login", {
+      const res = await fetch(apiUrl("/auth/internal/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -291,7 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyTotp = useCallback(
     async (pendingToken: string, code: string): Promise<InternalLoginResult> => {
-      const res = await fetch("/auth/internal/totp", {
+      const res = await fetch(apiUrl("/auth/internal/totp"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pending_token: pendingToken, code }),
@@ -316,7 +316,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Complete a forced password reset (expired password) and log in.
   const resetPassword = useCallback(
     async (resetToken: string, newPassword: string) => {
-      const res = await fetch("/auth/internal/reset-password", {
+      const res = await fetch(apiUrl("/auth/internal/reset-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reset_token: resetToken, new_password: newPassword }),
@@ -335,7 +335,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Passkey (WebAuthn) login: discoverable/usernameless. A user-verified
   // passkey is multi-factor, so this logs in directly without a TOTP step.
   const loginPasskey = useCallback(async () => {
-    const beginRes = await fetch("/auth/internal/webauthn/login/begin", { method: "POST" })
+    const beginRes = await fetch(apiUrl("/auth/internal/webauthn/login/begin"), { method: "POST" })
     const begin = (await beginRes.json().catch(() => ({}))) as {
       error?: string
       session_id?: string
@@ -346,7 +346,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const assertion = await startAuthentication({ optionsJSON: begin.options.publicKey })
     const res = await fetch(
-      `/auth/internal/webauthn/login/finish?session_id=${encodeURIComponent(begin.session_id)}`,
+      apiUrl(`/auth/internal/webauthn/login/finish?session_id=${encodeURIComponent(begin.session_id)}`),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -364,7 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = useCallback(
     async (username: string, password: string, firstName: string, lastName: string) => {
-      const res = await fetch("/auth/internal/signup", {
+      const res = await fetch(apiUrl("/auth/internal/signup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password, first_name: firstName, last_name: lastName }),
@@ -414,7 +414,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (code) {
         // External IdP one-time code → exchange for tokens.
-        fetch("/auth/exchange", {
+        fetch(apiUrl("/auth/exchange"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code }),

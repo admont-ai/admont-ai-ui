@@ -1,5 +1,15 @@
 import { toast } from "sonner"
 
+// Base URL of the API. Empty in dev (relative paths go through the Vite proxy);
+// set to the API origin (e.g. https://api.example.com) at build time when the
+// SPA and API are deployed on separate origins.
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "")
+
+/** Prefix an absolute API path with the configured API base URL. */
+export function apiUrl(path: string): string {
+  return path.startsWith("/") ? API_BASE + path : path
+}
+
 const TOKEN_KEY = "auth_token"
 const REFRESH_KEY = "refresh_token"
 
@@ -60,9 +70,10 @@ export async function authFetch(
     headers.set("Authorization", `Bearer ${token}`)
   }
 
+  const target = typeof input === "string" ? apiUrl(input) : input
   let response: Response
   try {
-    response = await fetch(input, { ...init, headers })
+    response = await fetch(target, { ...init, headers })
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
       throw err

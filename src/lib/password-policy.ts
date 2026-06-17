@@ -1,3 +1,5 @@
+import { apiUrl } from "./auth-fetch"
+
 export interface PasswordPolicy {
   min_length: number
   require_uppercase: boolean
@@ -13,7 +15,7 @@ let cache: PasswordPolicy | null = null
 export async function getPasswordPolicy(): Promise<PasswordPolicy | null> {
   if (cache) return cache
   try {
-    const res = await fetch("/auth/internal/password-policy")
+    const res = await fetch(apiUrl("/auth/internal/password-policy"))
     if (!res.ok) return null
     cache = (await res.json()) as PasswordPolicy
     return cache

@@ -2,6 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_GOOGLE_CLIENT_ID: string
+  // API origin (e.g. https://api.example.com). Empty in dev → relative paths via the Vite proxy.
+  readonly VITE_API_BASE_URL: string
 }
 
 interface ImportMeta {

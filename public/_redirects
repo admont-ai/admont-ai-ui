@@ -1,3 +1,0 @@
-# Cloudflare Pages SPA fallback: serve index.html for client-side routes
-# (e.g. /<repo>/<file>, /auth/callback). API calls go cross-origin to VITE_API_BASE_URL.
-/*    /index.html   200

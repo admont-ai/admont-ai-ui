@@ -1,0 +1,13 @@
+{
+  // Cloudflare Workers Assets deployment of the static Vite build.
+  // The SPA fallback is handled by `not_found_handling: single-page-application`
+  // (serves index.html with 200 for unmatched client routes such as
+  // /<repo>/<file> and /auth/callback) — do NOT use a `/* /index.html 200`
+  // rule in public/_redirects, which Workers Assets rejects as an infinite loop.
+  "name": "admont-ai-ui",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

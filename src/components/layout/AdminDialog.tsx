@@ -1,4 +1,4 @@
-import { Bot, Check, Cloud, DatabaseZap, Eye, EyeOff, FolderOpen, Loader2, Pencil, Plus, RefreshCw, Search, Shield, Trash2, Users, UserPlus, FolderGit2, X as XIcon } from "lucide-react"
+import { Bot, Check, Cloud, DatabaseZap, Eye, EyeOff, FolderOpen, Loader2, Pencil, Plus, RefreshCw, RotateCcw, Search, Shield, Trash2, Users, UserPlus, FolderGit2, X as XIcon } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -224,6 +224,8 @@ interface InternalUser {
   totp_enabled?: boolean
   password_expired?: boolean
   suspended?: boolean
+  daily_input_token_limit?: number
+  daily_output_token_limit?: number
   password_changed_at?: string
   created_at?: string
   updated_at?: string
@@ -240,6 +242,8 @@ function InternalUsersTab() {
   const [editRoles, setEditRoles] = useState<string[]>([])
   const [editSuperAdmin, setEditSuperAdmin] = useState(false)
   const [editSuspended, setEditSuspended] = useState(false)
+  const [editInputLimit, setEditInputLimit] = useState("")
+  const [editOutputLimit, setEditOutputLimit] = useState("")
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingUser, setDeletingUser] = useState<string | null>(null)
 
@@ -310,6 +314,8 @@ function InternalUsersTab() {
       body.roles = editRoles
       body.super_admin = editSuperAdmin
       body.suspended = editSuspended
+      body.daily_input_token_limit = inputToLimit(editInputLimit)
+      body.daily_output_token_limit = inputToLimit(editOutputLimit)
       const res = await authFetch(`/admin/users/internal/${encodeURIComponent(originalEmail)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -353,6 +359,8 @@ function InternalUsersTab() {
     setEditRoles([...user.roles])
     setEditSuperAdmin(!!user.super_admin)
     setEditSuspended(!!user.suspended)
+    setEditInputLimit(limitToInput(user.daily_input_token_limit))
+    setEditOutputLimit(limitToInput(user.daily_output_token_limit))
   }
 
   if (loading) {
@@ -447,6 +455,7 @@ function InternalUsersTab() {
             </p>
           )}
           <RoleCheckboxes roles={editRoles} onChange={setEditRoles} superAdmin={editSuperAdmin} onSuperAdminChange={setEditSuperAdmin} />
+          <DailyLimitFields input={editInputLimit} output={editOutputLimit} onInput={setEditInputLimit} onOutput={setEditOutputLimit} />
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={editSuspended} onChange={(e) => setEditSuspended(e.target.checked)} />
             Suspended (blocks sign-in)
@@ -544,6 +553,45 @@ function formatTs(ts?: string): string {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 }
 
+// fmtUsage formats "used / limit" with ∞ for an unlimited (0) cap.
+function fmtUsage(used: number, limit: number): string {
+  return `${used.toLocaleString()} / ${limit === 0 ? "∞" : limit.toLocaleString()}`
+}
+
+// Daily token-limit field helpers. "" = inherit the global default; "0" = unlimited.
+function limitToInput(n?: number): string {
+  return n === undefined || n === null ? "" : String(n)
+}
+function inputToLimit(s: string): number | null {
+  const t = s.trim()
+  if (t === "") return null
+  const n = Math.floor(Number(t))
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+
+// DailyLimitFields renders the per-user daily input/output token cap inputs used
+// in both the internal and external user edit forms.
+function DailyLimitFields({ input, output, onInput, onOutput }: {
+  input: string
+  output: string
+  onInput: (v: string) => void
+  onOutput: (v: string) => void
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="grid grid-cols-2 gap-2">
+        <LabeledField label="Daily input tokens">
+          <input type="number" min="0" value={input} onChange={(e) => onInput(e.target.value)} placeholder="inherit default" className={inputClass} />
+        </LabeledField>
+        <LabeledField label="Daily output tokens">
+          <input type="number" min="0" value={output} onChange={(e) => onOutput(e.target.value)} placeholder="inherit default" className={inputClass} />
+        </LabeledField>
+      </div>
+      <p className="text-xs text-muted-foreground">Blank = inherit the global default · 0 = unlimited.</p>
+    </div>
+  )
+}
+
 // ── External Users Tab ──────────────────────────────────
 
 interface ExternalUser {
@@ -554,6 +602,8 @@ interface ExternalUser {
   roles: string[]
   super_admin?: boolean
   status?: string
+  daily_input_token_limit?: number
+  daily_output_token_limit?: number
   created_at?: string
   updated_at?: string
 }
@@ -568,6 +618,8 @@ function ExternalUsersTab() {
   const [editRoles, setEditRoles] = useState<string[]>([])
   const [editSuperAdmin, setEditSuperAdmin] = useState(false)
   const [editSuspended, setEditSuspended] = useState(false)
+  const [editInputLimit, setEditInputLimit] = useState("")
+  const [editOutputLimit, setEditOutputLimit] = useState("")
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
   const [approvingKey, setApprovingKey] = useState<string | null>(null)
@@ -658,6 +710,8 @@ function ExternalUsersTab() {
       body.roles = editRoles
       body.super_admin = editSuperAdmin
       body.suspended = editSuspended
+      body.daily_input_token_limit = inputToLimit(editInputLimit)
+      body.daily_output_token_limit = inputToLimit(editOutputLimit)
       const res = await authFetch(`/admin/users/external/${encodeURIComponent(user.provider)}/${encodeURIComponent(user.email)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -700,6 +754,8 @@ function ExternalUsersTab() {
     setEditRoles([...user.roles])
     setEditSuperAdmin(!!user.super_admin)
     setEditSuspended(user.status === "suspended")
+    setEditInputLimit(limitToInput(user.daily_input_token_limit))
+    setEditOutputLimit(limitToInput(user.daily_output_token_limit))
   }
 
   if (loading) {
@@ -783,6 +839,7 @@ function ExternalUsersTab() {
               </LabeledField>
             </div>
             <RoleCheckboxes roles={editRoles} onChange={setEditRoles} superAdmin={editSuperAdmin} onSuperAdminChange={setEditSuperAdmin} />
+            <DailyLimitFields input={editInputLimit} output={editOutputLimit} onInput={setEditInputLimit} onOutput={setEditOutputLimit} />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={editSuspended} onChange={(e) => setEditSuspended(e.target.checked)} />
               Suspended (blocks sign-in)
@@ -2515,6 +2572,15 @@ interface LlmTokenLimits {
   agent: number
 }
 
+interface LlmUsageRow {
+  identity: string
+  email?: string
+  input_used: number
+  output_used: number
+  input_limit: number
+  output_limit: number
+}
+
 interface LlmModelEntry {
   id: string
   name: string
@@ -2564,13 +2630,22 @@ function LlmProvidersTab() {
   const [tokenLimits, setTokenLimits] = useState<Record<string, string>>({ ask: "", generate: "", summarize: "", edit: "", agent: "" })
   const [savingLimits, setSavingLimits] = useState(false)
 
+  // Per-user daily token quota: global default + live usage.
+  const [defaultLimits, setDefaultLimits] = useState<{ input: string; output: string }>({ input: "", output: "" })
+  const [savingDefaults, setSavingDefaults] = useState(false)
+  const [usage, setUsage] = useState<LlmUsageRow[]>([])
+  const [usageLoading, setUsageLoading] = useState(false)
+  const [resetting, setResetting] = useState<string | null>(null)
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [provRes, supRes, limitsRes] = await Promise.all([
+      const [provRes, supRes, limitsRes, defRes, usageRes] = await Promise.all([
         authFetch("/admin/llm"),
         authFetch("/admin/llm/supported"),
         authFetch("/admin/llm/token-limits"),
+        authFetch("/admin/llm/usage-limits"),
+        authFetch("/admin/llm/usage"),
       ])
       if (limitsRes.ok) {
         const data: LlmTokenLimits = await limitsRes.json()
@@ -2581,6 +2656,14 @@ function LlmProvidersTab() {
           edit: data.edit ? String(data.edit) : "",
           agent: data.agent ? String(data.agent) : "",
         })
+      }
+      if (defRes.ok) {
+        const data: { input?: number; output?: number } = await defRes.json()
+        setDefaultLimits({ input: data.input ? String(data.input) : "", output: data.output ? String(data.output) : "" })
+      }
+      if (usageRes.ok) {
+        const data: LlmUsageRow[] = await usageRes.json()
+        setUsage(Array.isArray(data) ? data : [])
       }
       if (provRes.ok) {
         const data = await provRes.json()
@@ -2680,6 +2763,72 @@ function LlmProvidersTab() {
       // handled by authFetch
     } finally {
       setSavingLimits(false)
+    }
+  }
+
+  async function handleSaveDefaults() {
+    setSavingDefaults(true)
+    try {
+      const body = { input: Number(defaultLimits.input) || 0, output: Number(defaultLimits.output) || 0 }
+      const res = await authFetch("/admin/llm/usage-limits", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) toast.success("Default daily limits saved")
+    } catch {
+      // handled by authFetch
+    } finally {
+      setSavingDefaults(false)
+    }
+  }
+
+  const fetchUsage = useCallback(async () => {
+    setUsageLoading(true)
+    try {
+      const res = await authFetch("/admin/llm/usage")
+      if (res.ok) {
+        const data: LlmUsageRow[] = await res.json()
+        setUsage(Array.isArray(data) ? data : [])
+      }
+    } catch {
+      // handled by authFetch
+    } finally {
+      setUsageLoading(false)
+    }
+  }, [])
+
+  async function handleResetUsage(identity: string) {
+    setResetting(identity)
+    try {
+      const res = await authFetch("/admin/llm/usage/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identity }),
+      })
+      if (res.ok) {
+        toast.success("Usage reset")
+        await fetchUsage()
+      }
+    } catch {
+      // handled by authFetch
+    } finally {
+      setResetting(null)
+    }
+  }
+
+  async function handleResetAllUsage() {
+    setResetting("*")
+    try {
+      const res = await authFetch("/admin/llm/usage/reset-all", { method: "POST" })
+      if (res.ok) {
+        toast.success("All usage reset")
+        await fetchUsage()
+      }
+    } catch {
+      // handled by authFetch
+    } finally {
+      setResetting(null)
     }
   }
 
@@ -2942,6 +3091,85 @@ function LlmProvidersTab() {
           {savingLimits && <Loader2 className="size-4 animate-spin" />}
           Save Limits
         </Button>
+      </div>
+
+      {/* Per-user daily token quota */}
+      <div className="border rounded-md p-4 space-y-3">
+        <h4 className="text-sm font-medium">Per-User Daily Token Quota</h4>
+        <p className="text-xs text-muted-foreground">
+          Default daily caps applied to every user (override per user in the Internal/External Users tabs). 0 = unlimited.
+          Usage is tracked in memory and resets at 00:00 UTC.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <LabeledField label="Default daily input tokens">
+            <input type="number" min="0" value={defaultLimits.input} onChange={(e) => setDefaultLimits((p) => ({ ...p, input: e.target.value }))} placeholder="unlimited" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Default daily output tokens">
+            <input type="number" min="0" value={defaultLimits.output} onChange={(e) => setDefaultLimits((p) => ({ ...p, output: e.target.value }))} placeholder="unlimited" className={inputClass} />
+          </LabeledField>
+        </div>
+        <Button size="sm" onClick={handleSaveDefaults} disabled={savingDefaults}>
+          {savingDefaults && <Loader2 className="size-4 animate-spin" />}
+          Save Defaults
+        </Button>
+
+        <div className="flex items-center justify-between pt-2">
+          <h5 className="text-sm font-medium">Current Usage</h5>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={fetchUsage} disabled={usageLoading}>
+              {usageLoading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              Refresh
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" disabled={resetting === "*" || usage.length === 0}>
+                  {resetting === "*" ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+                  Reset All
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset all token usage?</AlertDialogTitle>
+                  <AlertDialogDescription>This clears the current daily usage for every user.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleResetAllUsage}>Reset All</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+        <div className="border rounded-md overflow-x-auto">
+          <table className="w-full text-xs whitespace-nowrap">
+            <thead>
+              <tr className="border-b bg-neutral-100 dark:bg-neutral-800">
+                <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">User</th>
+                <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">Input used / limit</th>
+                <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">Output used / limit</th>
+                <th className="px-3 py-1.5 w-10" />
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {usage.length === 0 ? (
+                <tr><td colSpan={4} className="px-3 py-2 text-muted-foreground">No usage recorded yet.</td></tr>
+              ) : (
+                usage.map((row) => (
+                  <tr key={row.identity} className="hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                    <td className="px-3 py-1.5">{row.email || row.identity}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{fmtUsage(row.input_used, row.input_limit)}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{fmtUsage(row.output_used, row.output_limit)}</td>
+                    <td className="px-3 py-1.5 text-right">
+                      <Button variant="ghost" size="icon-xs" onClick={() => handleResetUsage(row.identity)} disabled={resetting === row.identity} title="Reset this user">
+                        {resetting === row.identity ? <Loader2 className="size-3 animate-spin" /> : <RotateCcw className="size-3" />}
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Provider list */}

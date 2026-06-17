@@ -1,4 +1,4 @@
-import { Bot, Check, Cloud, DatabaseZap, Eye, EyeOff, FolderOpen, Loader2, Pencil, Plus, RefreshCw, RotateCcw, Search, Shield, Trash2, Users, UserPlus, FolderGit2, X as XIcon } from "lucide-react"
+import { Bot, Check, Cloud, DatabaseZap, Eye, EyeOff, FolderOpen, Gauge, Loader2, Pencil, Plus, RefreshCw, RotateCcw, Search, Shield, Trash2, Users, UserPlus, FolderGit2, X as XIcon } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -73,7 +73,7 @@ function RepoTypeIcon({ type, className }: { type?: string; className?: string }
   }
 }
 
-type Tab = "internal_users" | "external_users" | "groups" | "repos" | "auth" | "llm" | "search"
+type Tab = "internal_users" | "external_users" | "groups" | "repos" | "auth" | "llm" | "llm_usage" | "search"
 
 const ROLES: { value: string; label: string }[] = [
   { value: "system_admin", label: "System Admin" },
@@ -164,6 +164,18 @@ export function AdminPanel({
               LLM Providers
             </button>
             <button
+              onClick={() => setTab("llm_usage")}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-left transition-colors",
+                tab === "llm_usage"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )}
+            >
+              <Gauge className="size-4" />
+              LLM Usage
+            </button>
+            <button
               onClick={() => setTab("search")}
               className={cn(
                 "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-left transition-colors",
@@ -202,6 +214,8 @@ export function AdminPanel({
           <AuthProvidersTab />
         ) : tab === "llm" && canManageUsers ? (
           <LlmProvidersTab />
+        ) : tab === "llm_usage" && canManageUsers ? (
+          <LlmUsageTab />
         ) : tab === "search" && canManageUsers ? (
           <SearchProvidersTab />
         ) : (
@@ -2626,45 +2640,13 @@ function LlmProvidersTab() {
   const [adding, setAdding] = useState(false)
   const [showNewKey, setShowNewKey] = useState(false)
 
-  // Token limits state (per-action output limits; "" = provider ceiling)
-  const [tokenLimits, setTokenLimits] = useState<Record<string, string>>({ ask: "", generate: "", summarize: "", edit: "", agent: "" })
-  const [savingLimits, setSavingLimits] = useState(false)
-
-  // Per-user daily token quota: global default + live usage.
-  const [defaultLimits, setDefaultLimits] = useState<{ input: string; output: string }>({ input: "", output: "" })
-  const [savingDefaults, setSavingDefaults] = useState(false)
-  const [usage, setUsage] = useState<LlmUsageRow[]>([])
-  const [usageLoading, setUsageLoading] = useState(false)
-  const [resetting, setResetting] = useState<string | null>(null)
-
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [provRes, supRes, limitsRes, defRes, usageRes] = await Promise.all([
+      const [provRes, supRes] = await Promise.all([
         authFetch("/admin/llm"),
         authFetch("/admin/llm/supported"),
-        authFetch("/admin/llm/token-limits"),
-        authFetch("/admin/llm/usage-limits"),
-        authFetch("/admin/llm/usage"),
       ])
-      if (limitsRes.ok) {
-        const data: LlmTokenLimits = await limitsRes.json()
-        setTokenLimits({
-          ask: data.ask ? String(data.ask) : "",
-          generate: data.generate ? String(data.generate) : "",
-          summarize: data.summarize ? String(data.summarize) : "",
-          edit: data.edit ? String(data.edit) : "",
-          agent: data.agent ? String(data.agent) : "",
-        })
-      }
-      if (defRes.ok) {
-        const data: { input?: number; output?: number } = await defRes.json()
-        setDefaultLimits({ input: data.input ? String(data.input) : "", output: data.output ? String(data.output) : "" })
-      }
-      if (usageRes.ok) {
-        const data: LlmUsageRow[] = await usageRes.json()
-        setUsage(Array.isArray(data) ? data : [])
-      }
       if (provRes.ok) {
         const data = await provRes.json()
         console.log("[admin/llm]", data)
@@ -2741,95 +2723,6 @@ function LlmProvidersTab() {
     setEditFavourites((prev) =>
       prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id],
     )
-  }
-
-  async function handleSaveLimits() {
-    setSavingLimits(true)
-    try {
-      const body = {
-        ask: Number(tokenLimits.ask) || 0,
-        generate: Number(tokenLimits.generate) || 0,
-        summarize: Number(tokenLimits.summarize) || 0,
-        edit: Number(tokenLimits.edit) || 0,
-        agent: Number(tokenLimits.agent) || 0,
-      }
-      const res = await authFetch("/admin/llm/token-limits", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-      if (res.ok) toast.success("Token limits saved")
-    } catch {
-      // handled by authFetch
-    } finally {
-      setSavingLimits(false)
-    }
-  }
-
-  async function handleSaveDefaults() {
-    setSavingDefaults(true)
-    try {
-      const body = { input: Number(defaultLimits.input) || 0, output: Number(defaultLimits.output) || 0 }
-      const res = await authFetch("/admin/llm/usage-limits", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-      if (res.ok) toast.success("Default daily limits saved")
-    } catch {
-      // handled by authFetch
-    } finally {
-      setSavingDefaults(false)
-    }
-  }
-
-  const fetchUsage = useCallback(async () => {
-    setUsageLoading(true)
-    try {
-      const res = await authFetch("/admin/llm/usage")
-      if (res.ok) {
-        const data: LlmUsageRow[] = await res.json()
-        setUsage(Array.isArray(data) ? data : [])
-      }
-    } catch {
-      // handled by authFetch
-    } finally {
-      setUsageLoading(false)
-    }
-  }, [])
-
-  async function handleResetUsage(identity: string) {
-    setResetting(identity)
-    try {
-      const res = await authFetch("/admin/llm/usage/reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identity }),
-      })
-      if (res.ok) {
-        toast.success("Usage reset")
-        await fetchUsage()
-      }
-    } catch {
-      // handled by authFetch
-    } finally {
-      setResetting(null)
-    }
-  }
-
-  async function handleResetAllUsage() {
-    setResetting("*")
-    try {
-      const res = await authFetch("/admin/llm/usage/reset-all", { method: "POST" })
-      if (res.ok) {
-        toast.success("All usage reset")
-        await fetchUsage()
-      }
-    } catch {
-      // handled by authFetch
-    } finally {
-      setResetting(null)
-    }
   }
 
   async function handleUpdate(name: string) {
@@ -3064,114 +2957,6 @@ function LlmProvidersTab() {
         </div>
       )}
 
-      {/* Token limits */}
-      <div className="border rounded-md p-4 space-y-3">
-        <h4 className="text-sm font-medium">Token Limits</h4>
-        <p className="text-xs text-muted-foreground">
-          Output token limits per request type. Each request is additionally capped by the provider&apos;s max tokens. Empty = provider ceiling.
-        </p>
-        <div className="grid grid-cols-5 gap-2">
-          <LabeledField label="Ask / Chat">
-            <input type="number" min="0" value={tokenLimits.ask} onChange={(e) => setTokenLimits((p) => ({ ...p, ask: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
-          </LabeledField>
-          <LabeledField label="Generate documents">
-            <input type="number" min="0" value={tokenLimits.generate} onChange={(e) => setTokenLimits((p) => ({ ...p, generate: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
-          </LabeledField>
-          <LabeledField label="Summarize">
-            <input type="number" min="0" value={tokenLimits.summarize} onChange={(e) => setTokenLimits((p) => ({ ...p, summarize: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
-          </LabeledField>
-          <LabeledField label="Edit actions">
-            <input type="number" min="0" value={tokenLimits.edit} onChange={(e) => setTokenLimits((p) => ({ ...p, edit: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
-          </LabeledField>
-          <LabeledField label="Agent">
-            <input type="number" min="0" value={tokenLimits.agent} onChange={(e) => setTokenLimits((p) => ({ ...p, agent: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
-          </LabeledField>
-        </div>
-        <Button size="sm" onClick={handleSaveLimits} disabled={savingLimits}>
-          {savingLimits && <Loader2 className="size-4 animate-spin" />}
-          Save Limits
-        </Button>
-      </div>
-
-      {/* Per-user daily token quota */}
-      <div className="border rounded-md p-4 space-y-3">
-        <h4 className="text-sm font-medium">Per-User Daily Token Quota</h4>
-        <p className="text-xs text-muted-foreground">
-          Default daily caps applied to every user (override per user in the Internal/External Users tabs). 0 = unlimited.
-          Usage is tracked in memory and resets at 00:00 UTC.
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <LabeledField label="Default daily input tokens">
-            <input type="number" min="0" value={defaultLimits.input} onChange={(e) => setDefaultLimits((p) => ({ ...p, input: e.target.value }))} placeholder="unlimited" className={inputClass} />
-          </LabeledField>
-          <LabeledField label="Default daily output tokens">
-            <input type="number" min="0" value={defaultLimits.output} onChange={(e) => setDefaultLimits((p) => ({ ...p, output: e.target.value }))} placeholder="unlimited" className={inputClass} />
-          </LabeledField>
-        </div>
-        <Button size="sm" onClick={handleSaveDefaults} disabled={savingDefaults}>
-          {savingDefaults && <Loader2 className="size-4 animate-spin" />}
-          Save Defaults
-        </Button>
-
-        <div className="flex items-center justify-between pt-2">
-          <h5 className="text-sm font-medium">Current Usage</h5>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={fetchUsage} disabled={usageLoading}>
-              {usageLoading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-              Refresh
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={resetting === "*" || usage.length === 0}>
-                  {resetting === "*" ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
-                  Reset All
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Reset all token usage?</AlertDialogTitle>
-                  <AlertDialogDescription>This clears the current daily usage for every user.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleResetAllUsage}>Reset All</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
-        <div className="border rounded-md overflow-x-auto">
-          <table className="w-full text-xs whitespace-nowrap">
-            <thead>
-              <tr className="border-b bg-neutral-100 dark:bg-neutral-800">
-                <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">User</th>
-                <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">Input used / limit</th>
-                <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">Output used / limit</th>
-                <th className="px-3 py-1.5 w-10" />
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {usage.length === 0 ? (
-                <tr><td colSpan={4} className="px-3 py-2 text-muted-foreground">No usage recorded yet.</td></tr>
-              ) : (
-                usage.map((row) => (
-                  <tr key={row.identity} className="hover:bg-neutral-100 dark:hover:bg-neutral-800">
-                    <td className="px-3 py-1.5">{row.email || row.identity}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">{fmtUsage(row.input_used, row.input_limit)}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">{fmtUsage(row.output_used, row.output_limit)}</td>
-                    <td className="px-3 py-1.5 text-right">
-                      <Button variant="ghost" size="icon-xs" onClick={() => handleResetUsage(row.identity)} disabled={resetting === row.identity} title="Reset this user">
-                        {resetting === row.identity ? <Loader2 className="size-3 animate-spin" /> : <RotateCcw className="size-3" />}
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* Provider list */}
       <div className="border rounded-md divide-y">
         {providers.length === 0 ? (
@@ -3348,6 +3133,269 @@ function LlmProvidersTab() {
             )
           })
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── LLM Usage Tab ──────────────────────────────────
+
+function LlmUsageTab() {
+  const [loading, setLoading] = useState(true)
+
+  // Per-action output limits ("" = provider ceiling).
+  const [tokenLimits, setTokenLimits] = useState<Record<string, string>>({ ask: "", generate: "", summarize: "", edit: "", agent: "" })
+  const [savingLimits, setSavingLimits] = useState(false)
+
+  // Per-user daily token quota: global default + live usage.
+  const [defaultLimits, setDefaultLimits] = useState<{ input: string; output: string }>({ input: "", output: "" })
+  const [savingDefaults, setSavingDefaults] = useState(false)
+  const [usage, setUsage] = useState<LlmUsageRow[]>([])
+  const [usageLoading, setUsageLoading] = useState(false)
+  const [resetting, setResetting] = useState<string | null>(null)
+
+  const fetchUsage = useCallback(async () => {
+    setUsageLoading(true)
+    try {
+      const res = await authFetch("/admin/llm/usage")
+      if (res.ok) {
+        const data: LlmUsageRow[] = await res.json()
+        setUsage(Array.isArray(data) ? data : [])
+      }
+    } catch {
+      // handled by authFetch
+    } finally {
+      setUsageLoading(false)
+    }
+  }, [])
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [limitsRes, defRes, usageRes] = await Promise.all([
+        authFetch("/admin/llm/token-limits"),
+        authFetch("/admin/llm/usage-limits"),
+        authFetch("/admin/llm/usage"),
+      ])
+      if (limitsRes.ok) {
+        const data: LlmTokenLimits = await limitsRes.json()
+        setTokenLimits({
+          ask: data.ask ? String(data.ask) : "",
+          generate: data.generate ? String(data.generate) : "",
+          summarize: data.summarize ? String(data.summarize) : "",
+          edit: data.edit ? String(data.edit) : "",
+          agent: data.agent ? String(data.agent) : "",
+        })
+      }
+      if (defRes.ok) {
+        const data: { input?: number; output?: number } = await defRes.json()
+        setDefaultLimits({ input: data.input ? String(data.input) : "", output: data.output ? String(data.output) : "" })
+      }
+      if (usageRes.ok) {
+        const data: LlmUsageRow[] = await usageRes.json()
+        setUsage(Array.isArray(data) ? data : [])
+      }
+    } catch {
+      // handled by authFetch
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  async function handleSaveLimits() {
+    setSavingLimits(true)
+    try {
+      const body = {
+        ask: Number(tokenLimits.ask) || 0,
+        generate: Number(tokenLimits.generate) || 0,
+        summarize: Number(tokenLimits.summarize) || 0,
+        edit: Number(tokenLimits.edit) || 0,
+        agent: Number(tokenLimits.agent) || 0,
+      }
+      const res = await authFetch("/admin/llm/token-limits", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) toast.success("Token limits saved")
+    } catch {
+      // handled by authFetch
+    } finally {
+      setSavingLimits(false)
+    }
+  }
+
+  async function handleSaveDefaults() {
+    setSavingDefaults(true)
+    try {
+      const body = { input: Number(defaultLimits.input) || 0, output: Number(defaultLimits.output) || 0 }
+      const res = await authFetch("/admin/llm/usage-limits", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) toast.success("Default daily limits saved")
+    } catch {
+      // handled by authFetch
+    } finally {
+      setSavingDefaults(false)
+    }
+  }
+
+  async function handleResetUsage(identity: string) {
+    setResetting(identity)
+    try {
+      const res = await authFetch("/admin/llm/usage/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identity }),
+      })
+      if (res.ok) {
+        toast.success("Usage reset")
+        await fetchUsage()
+      }
+    } catch {
+      // handled by authFetch
+    } finally {
+      setResetting(null)
+    }
+  }
+
+  async function handleResetAllUsage() {
+    setResetting("*")
+    try {
+      const res = await authFetch("/admin/llm/usage/reset-all", { method: "POST" })
+      if (res.ok) {
+        toast.success("All usage reset")
+        await fetchUsage()
+      }
+    } catch {
+      // handled by authFetch
+    } finally {
+      setResetting(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Token limits */}
+      <div className="border rounded-md p-4 space-y-3">
+        <h4 className="text-sm font-medium">Token Limits</h4>
+        <p className="text-xs text-muted-foreground">
+          Output token limits per request type. Each request is additionally capped by the provider&apos;s max tokens. Empty = provider ceiling.
+        </p>
+        <div className="grid grid-cols-5 gap-2">
+          <LabeledField label="Ask / Chat">
+            <input type="number" min="0" value={tokenLimits.ask} onChange={(e) => setTokenLimits((p) => ({ ...p, ask: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Generate documents">
+            <input type="number" min="0" value={tokenLimits.generate} onChange={(e) => setTokenLimits((p) => ({ ...p, generate: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Summarize">
+            <input type="number" min="0" value={tokenLimits.summarize} onChange={(e) => setTokenLimits((p) => ({ ...p, summarize: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Edit actions">
+            <input type="number" min="0" value={tokenLimits.edit} onChange={(e) => setTokenLimits((p) => ({ ...p, edit: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Agent">
+            <input type="number" min="0" value={tokenLimits.agent} onChange={(e) => setTokenLimits((p) => ({ ...p, agent: e.target.value }))} placeholder="provider ceiling" className={inputClass} />
+          </LabeledField>
+        </div>
+        <Button size="sm" onClick={handleSaveLimits} disabled={savingLimits}>
+          {savingLimits && <Loader2 className="size-4 animate-spin" />}
+          Save Limits
+        </Button>
+      </div>
+
+      {/* Per-user daily token quota */}
+      <div className="border rounded-md p-4 space-y-3">
+        <h4 className="text-sm font-medium">Per-User Daily Token Quota</h4>
+        <p className="text-xs text-muted-foreground">
+          Default daily caps applied to every user (override per user in the Internal/External Users tabs). 0 = unlimited.
+          Usage is tracked in memory and resets at 00:00 UTC.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <LabeledField label="Default daily input tokens">
+            <input type="number" min="0" value={defaultLimits.input} onChange={(e) => setDefaultLimits((p) => ({ ...p, input: e.target.value }))} placeholder="unlimited" className={inputClass} />
+          </LabeledField>
+          <LabeledField label="Default daily output tokens">
+            <input type="number" min="0" value={defaultLimits.output} onChange={(e) => setDefaultLimits((p) => ({ ...p, output: e.target.value }))} placeholder="unlimited" className={inputClass} />
+          </LabeledField>
+        </div>
+        <Button size="sm" onClick={handleSaveDefaults} disabled={savingDefaults}>
+          {savingDefaults && <Loader2 className="size-4 animate-spin" />}
+          Save Defaults
+        </Button>
+
+        <div className="flex items-center justify-between pt-2">
+          <h5 className="text-sm font-medium">Current Usage</h5>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={fetchUsage} disabled={usageLoading}>
+              {usageLoading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              Refresh
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" disabled={resetting === "*" || usage.length === 0}>
+                  {resetting === "*" ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+                  Reset All
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset all token usage?</AlertDialogTitle>
+                  <AlertDialogDescription>This clears the current daily usage for every user.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleResetAllUsage}>Reset All</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+        <div className="border rounded-md overflow-x-auto">
+          <table className="w-full text-xs whitespace-nowrap">
+            <thead>
+              <tr className="border-b bg-neutral-100 dark:bg-neutral-800">
+                <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">User</th>
+                <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">Input used / limit</th>
+                <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">Output used / limit</th>
+                <th className="px-3 py-1.5 w-10" />
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {usage.length === 0 ? (
+                <tr><td colSpan={4} className="px-3 py-2 text-muted-foreground">No usage recorded yet.</td></tr>
+              ) : (
+                usage.map((row) => (
+                  <tr key={row.identity} className="hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                    <td className="px-3 py-1.5">{row.email || row.identity}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{fmtUsage(row.input_used, row.input_limit)}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{fmtUsage(row.output_used, row.output_limit)}</td>
+                    <td className="px-3 py-1.5 text-right">
+                      <Button variant="ghost" size="icon-xs" onClick={() => handleResetUsage(row.identity)} disabled={resetting === row.identity} title="Reset this user">
+                        {resetting === row.identity ? <Loader2 className="size-3 animate-spin" /> : <RotateCcw className="size-3" />}
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

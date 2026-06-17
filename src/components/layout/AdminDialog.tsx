@@ -151,6 +151,34 @@ export function AdminPanel({
               Auth
             </button>
             <div className="border-t my-1" />
+          </>
+        )}
+        <button
+          onClick={() => setTab("repos")}
+          className={cn(
+            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-left transition-colors",
+            tab === "repos"
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+          )}
+        >
+          <FolderGit2 className="size-4" />
+          Repositories
+        </button>
+        {canManageUsers && (
+          <>
+            <button
+              onClick={() => setTab("search")}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-left transition-colors",
+                tab === "search"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )}
+            >
+              <Search className="size-4" />
+              Search Providers
+            </button>
             <button
               onClick={() => setTab("llm")}
               className={cn(
@@ -175,32 +203,8 @@ export function AdminPanel({
               <Gauge className="size-4" />
               LLM Usage
             </button>
-            <button
-              onClick={() => setTab("search")}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-left transition-colors",
-                tab === "search"
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-              )}
-            >
-              <Search className="size-4" />
-              Search Providers
-            </button>
           </>
         )}
-        <button
-          onClick={() => setTab("repos")}
-          className={cn(
-            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-left transition-colors",
-            tab === "repos"
-              ? "bg-accent text-accent-foreground"
-              : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-          )}
-        >
-          <FolderGit2 className="size-4" />
-          Repositories
-        </button>
       </nav>
       {/* Content */}
       <div className="flex-1 overflow-y-auto bg-editor px-4 py-3">

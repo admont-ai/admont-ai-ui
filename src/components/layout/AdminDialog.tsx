@@ -2586,6 +2586,12 @@ interface LlmTokenLimits {
   agent: number
 }
 
+interface LlmProviderUsage {
+  provider: string
+  input_used: number
+  output_used: number
+}
+
 interface LlmUsageRow {
   identity: string
   email?: string
@@ -2593,6 +2599,7 @@ interface LlmUsageRow {
   output_used: number
   input_limit: number
   output_limit: number
+  providers?: LlmProviderUsage[]
 }
 
 interface LlmModelEntry {
@@ -3382,10 +3389,21 @@ function LlmUsageTab() {
               ) : (
                 usage.map((row) => (
                   <tr key={row.identity} className="hover:bg-neutral-100 dark:hover:bg-neutral-800">
-                    <td className="px-3 py-1.5">{row.email || row.identity}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">{fmtUsage(row.input_used, row.input_limit)}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">{fmtUsage(row.output_used, row.output_limit)}</td>
-                    <td className="px-3 py-1.5 text-right">
+                    <td className="px-3 py-1.5 align-top">
+                      <div>{row.email || row.identity}</div>
+                      {row.providers && row.providers.length > 0 && (
+                        <div className="mt-0.5 text-[11px] text-muted-foreground">
+                          {row.providers.map((p) => (
+                            <span key={p.provider} className="mr-2 inline-block tabular-nums">
+                              {p.provider} {p.input_used.toLocaleString()}↑ {p.output_used.toLocaleString()}↓
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 text-right align-top tabular-nums">{fmtUsage(row.input_used, row.input_limit)}</td>
+                    <td className="px-3 py-1.5 text-right align-top tabular-nums">{fmtUsage(row.output_used, row.output_limit)}</td>
+                    <td className="px-3 py-1.5 text-right align-top">
                       <Button variant="ghost" size="icon-xs" onClick={() => handleResetUsage(row.identity)} disabled={resetting === row.identity} title="Reset this user">
                         {resetting === row.identity ? <Loader2 className="size-3 animate-spin" /> : <RotateCcw className="size-3" />}
                       </Button>

@@ -2574,6 +2574,7 @@ interface LlmProviderEntry {
   provider_type: string
   api_key?: string
   base_url?: string
+  region?: string
   model?: string
   default_model?: string
   favourite_models?: string[]
@@ -2626,6 +2627,12 @@ const SELF_HOSTED_LLM = new Set(["ollama", "vllm", "localai", "lmstudio", "textg
 
 function isSelfHostedLlm(name: string) {
   return SELF_HOSTED_LLM.has(name.toLowerCase().replace(/[\s_-]/g, ""))
+}
+
+// Bedrock authenticates via the standard AWS credential chain (IAM role, env
+// vars, shared config, etc.) — it never uses an API key, but it does need a region.
+function isBedrockLlm(name: string) {
+  return name.toLowerCase() === "bedrock"
 }
 
 function LlmProvidersTab() {
@@ -2709,6 +2716,7 @@ function LlmProvidersTab() {
     const fields: Record<string, string> = {
       api_key: apiKey,
       base_url: (p.base_url as string) ?? "",
+      region: (p.region as string) ?? "",
       model: p.default_model ?? (p.model as string) ?? "",
       max_tokens: p.max_tokens ? String(p.max_tokens) : "",
     }
@@ -2787,7 +2795,8 @@ function LlmProvidersTab() {
   }
 
   async function handleAdd() {
-    if (!newProvider || !newName.trim() || !newFields.api_key?.trim()) return
+    if (!newProvider || !newName.trim()) return
+    if (isBedrockLlm(newProvider) ? !newFields.region?.trim() : !newFields.api_key?.trim()) return
     const extra = getSupportedFields(newProvider)
     const missingRequired = extra.filter((f) => f.required).some((f) => !newFields[f.key]?.trim())
     if (missingRequired) return
@@ -2826,7 +2835,7 @@ function LlmProvidersTab() {
   const newExtra = newProvider ? getSupportedFields(newProvider) : []
   const canAdd = !!newProvider
     && !!newName.trim()
-    && !!newFields.api_key?.trim()
+    && (isBedrockLlm(newProvider) ? !!newFields.region?.trim() : !!newFields.api_key?.trim())
     && !newExtra.filter((f) => f.required).some((f) => !newFields[f.key]?.trim())
 
   if (loading) {
@@ -2895,23 +2904,35 @@ function LlmProvidersTab() {
               <LabeledField label="Name *">
                 <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. my-anthropic" className={inputClass} />
               </LabeledField>
-              <LabeledField label="API Key *">
-                <div className="relative">
+              {isBedrockLlm(newProvider) ? (
+                <LabeledField label="Region *">
                   <input
-                    type={showNewKey ? "text" : "password"}
-                    value={newFields.api_key ?? ""}
-                    onChange={(e) => setNewField("api_key", e.target.value)}
-                    className={inputClass + " pr-9"}
+                    type="text"
+                    value={newFields.region ?? ""}
+                    onChange={(e) => setNewField("region", e.target.value)}
+                    placeholder="us-east-1"
+                    className={inputClass}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewKey(!showNewKey)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showNewKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </LabeledField>
+                </LabeledField>
+              ) : (
+                <LabeledField label="API Key *">
+                  <div className="relative">
+                    <input
+                      type={showNewKey ? "text" : "password"}
+                      value={newFields.api_key ?? ""}
+                      onChange={(e) => setNewField("api_key", e.target.value)}
+                      className={inputClass + " pr-9"}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewKey(!showNewKey)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showNewKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </LabeledField>
+              )}
               {isSelfHostedLlm(newProvider) && (
                 <LabeledField label="Base URL *">
                   <input type="text" value={newFields.base_url ?? ""} onChange={(e) => setNewField("base_url", e.target.value)} placeholder="http://localhost:11434" className={inputClass} />
@@ -2987,14 +3008,26 @@ function LlmProvidersTab() {
                     {p.source && <span className="text-xs text-muted-foreground">({p.source})</span>}
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <LabeledField label="API Key">
-                      <input
-                        type="text"
-                        value={editFields.api_key ?? ""}
-                        onChange={(e) => setEditField("api_key", e.target.value)}
-                        className={inputClass}
-                      />
-                    </LabeledField>
+                    {isBedrockLlm(pt) ? (
+                      <LabeledField label="Region *">
+                        <input
+                          type="text"
+                          value={editFields.region ?? ""}
+                          onChange={(e) => setEditField("region", e.target.value)}
+                          placeholder="us-east-1"
+                          className={inputClass}
+                        />
+                      </LabeledField>
+                    ) : (
+                      <LabeledField label="API Key">
+                        <input
+                          type="text"
+                          value={editFields.api_key ?? ""}
+                          onChange={(e) => setEditField("api_key", e.target.value)}
+                          className={inputClass}
+                        />
+                      </LabeledField>
+                    )}
                     {isSelfHostedLlm(pt) && (
                       <LabeledField label="Base URL *">
                         <input type="text" value={editFields.base_url ?? ""} onChange={(e) => setEditField("base_url", e.target.value)} placeholder="http://localhost:11434" className={inputClass} />
@@ -3091,6 +3124,7 @@ function LlmProvidersTab() {
                     <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
                       {p.api_key && <p>API Key: {maskSecret(p.api_key)}</p>}
                       {p.base_url && <p>Base URL: {p.base_url}</p>}
+                      {p.region && <p>Region: {p.region}</p>}
                       {(p.default_model || p.model) && <p>Default Model: {p.default_model || p.model}</p>}
                       {!!p.max_tokens && <p>Max Tokens: {p.max_tokens}</p>}
                       <p>

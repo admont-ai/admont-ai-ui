@@ -15,6 +15,7 @@ export default defineConfig({
     },
   },
   server: {
+    port: 5175,
     proxy: {
       "/auth/providers": {
         target: "http://localhost:8080",

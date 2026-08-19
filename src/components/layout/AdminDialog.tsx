@@ -3127,11 +3127,6 @@ function LlmProvidersTab() {
                       {p.region && <p>Region: {p.region}</p>}
                       {(p.default_model || p.model) && <p>Default Model: {p.default_model || p.model}</p>}
                       {!!p.max_tokens && <p>Max Tokens: {p.max_tokens}</p>}
-                      <p>
-                        Favourite Models: {p.favourite_models?.length
-                          ? p.favourite_models.join(", ")
-                          : "all current models"}
-                      </p>
                       {extra.map((f) => p[f.key] ? <p key={f.key}>{f.label}: {String(p[f.key])}</p> : null)}
                     </div>
                   </div>

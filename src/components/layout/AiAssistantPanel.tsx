@@ -1,5 +1,5 @@
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
-import { ArrowUp, BookOpenText, ChevronDown, FileText, Library, Loader2, MessageSquarePlus, MessageSquareText, Sparkles, Trash2, X } from "lucide-react"
+import { ArrowUp, BookOpenText, ChevronDown, FileText, Library, Loader2, MessageSquarePlus, MessageSquareText, Sparkles, Square, Trash2, X } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { toast } from "sonner"
@@ -113,6 +113,11 @@ export function AiAssistantPanel({
   const [liveSelection, setLiveSelection] = useState(selectedText)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+
+  const handleStop = useCallback(() => {
+    abortControllerRef.current?.abort()
+  }, [])
 
   useEffect(() => {
     setLiveSelection(selectedText)
@@ -138,6 +143,8 @@ export function AiAssistantPanel({
   // Read-only LLM request whose result is shown in the panel (Summarize tool).
   const sendRequest = useCallback(async (requestBody: Record<string, unknown>) => {
     if (loading) return
+    const controller = new AbortController()
+    abortControllerRef.current = controller
     setLoading(true)
     setStreamingResponse("")
     try {
@@ -145,20 +152,24 @@ export function AiAssistantPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...requestBody, model: selectedModel || undefined }),
+        signal: controller.signal,
       })
       if (!res.ok) return
       const data = await res.json()
       setStreamingResponse(data.content ?? data.answer ?? "")
       setInput("")
     } catch {
-      // errors handled by authFetch
+      // errors handled by authFetch; aborts are silent
     } finally {
       setLoading(false)
+      abortControllerRef.current = null
     }
   }, [selectedModel, loading])
 
   const sendRagSearch = useCallback(async (query: string, context?: string) => {
     if (loading || !query.trim()) return
+    const controller = new AbortController()
+    abortControllerRef.current = controller
     setLoading(true)
     setStreamingResponse("")
     try {
@@ -207,6 +218,7 @@ export function AiAssistantPanel({
           conversation_id: convId,
           history: history.length > 0 ? history : undefined,
         }),
+        signal: controller.signal,
       })
       if (!res.ok) return
       const data = await res.json()
@@ -225,9 +237,10 @@ export function AiAssistantPanel({
       refreshConversations()
       setInput("")
     } catch {
-      // errors handled by authFetch
+      // errors handled by authFetch; aborts are silent
     } finally {
       setLoading(false)
+      abortControllerRef.current = null
     }
   }, [loading, repos, repoSlug, scope, selectedModel, activeConversationId, activeMessages, createConversation, addMessage, refreshConversations, filePath])
 
@@ -235,6 +248,8 @@ export function AiAssistantPanel({
   // update files in the current repo.
   const sendAgentRequest = useCallback(async (query: string) => {
     if (loading || !query.trim() || !repoSlug) return
+    const controller = new AbortController()
+    abortControllerRef.current = controller
     setLoading(true)
     setStreamingResponse("")
     try {
@@ -265,6 +280,7 @@ export function AiAssistantPanel({
           conversation_id: convId,
           history: history.length > 0 ? history : undefined,
         }),
+        signal: controller.signal,
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -289,9 +305,10 @@ export function AiAssistantPanel({
         .map((a) => a.path as string)
       if (changed.length > 0) onFilesChanged?.(changed)
     } catch {
-      // network errors handled by authFetch
+      // network errors handled by authFetch; aborts are silent
     } finally {
       setLoading(false)
+      abortControllerRef.current = null
     }
   }, [loading, repoSlug, filePath, activeConversationId, activeMessages, selectedModel, createConversation, addMessage, refreshConversations, onFilesChanged])
 
@@ -434,6 +451,12 @@ export function AiAssistantPanel({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   {mode === "edit" ? "Working…" : "Thinking…"}
+                  <button
+                    onClick={handleStop}
+                    className="ml-1 rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
+                  >
+                    Stop
+                  </button>
                 </div>
               </div>
             )}
@@ -524,11 +547,12 @@ export function AiAssistantPanel({
               )}
             </div>
             <button
-              onClick={() => handleSubmit()}
-              disabled={!canSubmit || loading}
+              onClick={loading ? handleStop : () => handleSubmit()}
+              disabled={!loading && !canSubmit}
+              title={loading ? "Stop" : undefined}
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-primary text-teal-foreground transition-opacity hover:bg-teal-hover disabled:opacity-30"
             >
-              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
+              {loading ? <Square className="h-3 w-3 fill-current" /> : <ArrowUp className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>

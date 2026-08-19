@@ -1,5 +1,5 @@
 import { type RefObject, useCallback, useRef, useState } from "react"
-import { Sparkles, Loader2 } from "lucide-react"
+import { Sparkles, Square } from "lucide-react"
 import type { MDXEditorMethods } from "@mdxeditor/editor"
 import { useCellValue, activeEditor$ } from "@mdxeditor/editor"
 import { $getSelection, $setSelection } from "lexical"
@@ -33,6 +33,7 @@ export function AiDialog({ editorRef }: AiDialogProps) {
   const [prompt, setPrompt] = useState("")
   const [instructions, setInstructions] = useState("")
   const [loading, setLoading] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const handleOpen = useCallback(() => {
     // Save the current Lexical editor and selection before the dialog steals focus
@@ -58,12 +59,19 @@ export function AiDialog({ editorRef }: AiDialogProps) {
   }, [editorRef, activeEditor])
 
   const handleClose = useCallback(() => {
+    abortControllerRef.current?.abort()
     setOpen(false)
     savedEditorRef.current = null
     savedSelectionRef.current = null
   }, [])
 
+  const handleStop = useCallback(() => {
+    abortControllerRef.current?.abort()
+  }, [])
+
   const handleSubmit = useCallback(async () => {
+    const controller = new AbortController()
+    abortControllerRef.current = controller
     setLoading(true)
     try {
       const body =
@@ -75,6 +83,7 @@ export function AiDialog({ editorRef }: AiDialogProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: controller.signal,
       })
       if (!res.ok) return
 
@@ -111,9 +120,10 @@ export function AiDialog({ editorRef }: AiDialogProps) {
         handleClose()
       }
     } catch {
-      // errors are already toasted by authFetch
+      // errors are already toasted by authFetch; aborts are silent
     } finally {
       setLoading(false)
+      abortControllerRef.current = null
       savedEditorRef.current = null
       savedSelectionRef.current = null
     }
@@ -190,12 +200,16 @@ export function AiDialog({ editorRef }: AiDialogProps) {
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button variant="ai" onClick={handleSubmit} disabled={!canSubmit || loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {loading
-                ? mode === "generate" ? "Generating..." : "Polishing..."
-                : mode === "generate" ? "Generate" : "Polish"}
-            </Button>
+            {loading ? (
+              <Button variant="ai" onClick={handleStop}>
+                <Square className="mr-2 h-3.5 w-3.5 fill-current" />
+                {mode === "generate" ? "Generating..." : "Polishing..."}
+              </Button>
+            ) : (
+              <Button variant="ai" onClick={handleSubmit} disabled={!canSubmit}>
+                {mode === "generate" ? "Generate" : "Polish"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

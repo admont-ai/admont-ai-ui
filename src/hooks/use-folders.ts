@@ -3,8 +3,7 @@ import { useCallback } from "react"
 import { authFetch } from "@/lib/auth-fetch"
 
 function buildFolderUrl(repo: string, path: string) {
-  const base = `/repos/${encodeURIComponent(repo)}/folder`
-  return path ? `${base}/${path}` : base
+  return `/repos/${encodeURIComponent(repo)}/folder/${path}`
 }
 
 export function useFolders(

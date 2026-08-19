@@ -80,6 +80,33 @@ location / {
 }
 ```
 
+## Docker
+
+A production image is published to Docker Hub as [`chfischerx/admont-ai-ui`](https://hub.docker.com/r/chfischerx/admont-ai-ui) — a multi-stage build that serves the static `dist/` output via nginx with SPA fallback routing.
+
+```sh
+docker run -d -p 8080:80 chfischerx/admont-ai-ui:latest
+```
+
+### Environment Variables
+
+Since this is a static SPA, environment variables can't be read at runtime the normal way — Vite bakes `VITE_*` vars into the JS bundle at build time. To let one image be reused across environments, the container instead regenerates a small `/config.js` file from these variables **at startup** (via `docker-entrypoint.d/20-generate-config.sh`), which the app reads before anything else loads.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `API_BASE_URL` | Origin of the API the SPA talks to (e.g. `https://api.example.com`). Leave unset for relative paths, e.g. when the SPA and API share an origin behind a reverse proxy. | *(empty)* |
+
+```sh
+docker run -d -p 8080:80 -e API_BASE_URL=https://api.example.com chfischerx/admont-ai-ui:latest
+```
+
+### Building locally
+
+```sh
+docker build -t admont-ai-ui .
+docker run -d -p 8080:80 admont-ai-ui
+```
+
 ## Releasing
 
 Publishing a new version to npm is automated by GitHub Actions ([`.github/workflows/publish.yml`](.github/workflows/publish.yml)) and triggered by pushing a `v*.*.*` tag whose version matches `package.json`.

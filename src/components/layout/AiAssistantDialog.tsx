@@ -1,5 +1,5 @@
-import { type RefObject, useCallback, useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
+import { Square } from "lucide-react"
 
 import { authFetch } from "@/lib/auth-fetch"
 import { useAiLog } from "@/hooks/use-ai-log"
@@ -35,6 +35,7 @@ export function AiAssistantDialog({
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState("")
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const hasSelection = selectedText.trim().length > 0
 
@@ -55,10 +56,17 @@ export function AiAssistantDialog({
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = useCallback(() => {
+    abortControllerRef.current?.abort()
     onOpenChange(false)
   }, [onOpenChange])
 
+  const handleStop = useCallback(() => {
+    abortControllerRef.current?.abort()
+  }, [])
+
   const handleSubmit = useCallback(async () => {
+    const controller = new AbortController()
+    abortControllerRef.current = controller
     setLoading(true)
     try {
       let body: Record<string, unknown>
@@ -90,6 +98,7 @@ export function AiAssistantDialog({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: controller.signal,
       })
       if (!res.ok) return
 
@@ -130,9 +139,10 @@ export function AiAssistantDialog({
         handleClose()
       }
     } catch {
-      // errors handled by authFetch
+      // errors handled by authFetch; aborts are silent
     } finally {
       setLoading(false)
+      abortControllerRef.current = null
     }
   }, [mode, input, selectedText, selectedModel, editorRef, handleClose, addEntry])
 
@@ -225,10 +235,16 @@ export function AiAssistantDialog({
           <Button variant="outline" onClick={handleClose}>
             {mode === "ask" && response ? "Close" : "Cancel"}
           </Button>
-          <Button variant="ai" onClick={handleSubmit} disabled={!canSubmit || loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {loading ? loadingLabel : modeLabel}
-          </Button>
+          {loading ? (
+            <Button variant="ai" onClick={handleStop}>
+              <Square className="mr-2 h-3.5 w-3.5 fill-current" />
+              {loadingLabel}
+            </Button>
+          ) : (
+            <Button variant="ai" onClick={handleSubmit} disabled={!canSubmit}>
+              {modeLabel}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

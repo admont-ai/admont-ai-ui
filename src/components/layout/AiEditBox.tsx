@@ -1,5 +1,5 @@
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
-import { ArrowUp, Loader2, Pencil, Scissors, Sparkles, SpellCheck, X } from "lucide-react"
+import { ArrowUp, Pencil, Scissors, Sparkles, SpellCheck, Square, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { authFetch } from "@/lib/auth-fetch"
@@ -35,8 +35,13 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
   const [notes, setNotes] = useState("")
   const [hasSelection, setHasSelection] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const isDiagram = !!fileType
+
+  const handleStop = useCallback(() => {
+    abortControllerRef.current?.abort()
+  }, [])
 
   // Track the editor text selection so the box can switch between
   // "improve selection" and "generate at cursor" (markdown mode only).
@@ -73,6 +78,8 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
   const runRequest = useCallback(
     async (body: Record<string, unknown>, apply: (result: string, data: Record<string, unknown>) => Promise<void> | void) => {
       if (loading) return
+      const controller = new AbortController()
+      abortControllerRef.current = controller
       setLoading(true)
       setNotes("")
       try {
@@ -80,6 +87,7 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...body, model: selectedModel || undefined }),
+          signal: controller.signal,
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) {
@@ -95,9 +103,10 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
         if (data.notes) setNotes(data.notes)
         setInput("")
       } catch {
-        // network errors handled by authFetch
+        // network errors handled by authFetch; aborts are silent
       } finally {
         setLoading(false)
+        abortControllerRef.current = null
       }
     },
     [loading, selectedModel],
@@ -226,12 +235,12 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
               <X className="size-3.5" />
             </button>
             <button
-              onClick={handleSubmit}
-              disabled={!input.trim() || loading}
+              onClick={loading ? handleStop : handleSubmit}
+              disabled={!loading && !input.trim()}
               className="flex size-7 items-center justify-center rounded-lg bg-teal-primary text-teal-foreground transition-opacity hover:bg-teal-hover disabled:opacity-30"
-              title="Apply"
+              title={loading ? "Stop" : "Apply"}
             >
-              {loading ? <Loader2 className="size-3.5 animate-spin" /> : <ArrowUp className="size-3.5" />}
+              {loading ? <Square className="size-3 fill-current" /> : <ArrowUp className="size-3.5" />}
             </button>
           </div>
         </div>

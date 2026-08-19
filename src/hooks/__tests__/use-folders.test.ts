@@ -116,7 +116,7 @@ describe("useFolders", () => {
     })
 
     expect(mockAuthFetch).toHaveBeenCalledWith(
-      "/repos/repo/folder",
+      "/repos/repo/folder/",
       expect.anything(),
     )
   })

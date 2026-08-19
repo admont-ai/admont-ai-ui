@@ -1,9 +1,17 @@
 import { toast } from "sonner"
 
-// Base URL of the API. Empty in dev (relative paths go through the Vite proxy);
-// set to the API origin (e.g. https://api.example.com) at build time when the
-// SPA and API are deployed on separate origins.
-const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "")
+declare global {
+  interface Window {
+    __APP_CONFIG__?: { API_BASE_URL?: string }
+  }
+}
+
+// Base URL of the API. Empty in dev (relative paths go through the Vite proxy).
+// Resolved at runtime from window.__APP_CONFIG__ (injected by the Docker image's
+// entrypoint), falling back to the Vite build-time env var.
+const API_BASE = (
+  window.__APP_CONFIG__?.API_BASE_URL ?? import.meta.env.VITE_API_BASE_URL ?? ""
+).replace(/\/$/, "")
 
 /** Prefix an absolute API path with the configured API base URL. */
 export function apiUrl(path: string): string {

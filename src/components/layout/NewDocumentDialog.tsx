@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -47,13 +47,16 @@ export function NewDocumentDialog({
   const [filename, setFilename] = useState("")
   const [fileType, setFileType] = useState<FileType>(FILE_TYPES[0])
   const [aiPrompt, setAiPrompt] = useState("")
+  const [aiPromptExpanded, setAiPromptExpanded] = useState(false)
   const [loading, setLoading] = useState(false)
+  const aiPromptRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (open) {
       setFilename("")
       setFileType(FILE_TYPES[0])
       setAiPrompt("")
+      setAiPromptExpanded(false)
       setLoading(false)
     }
   }, [open])
@@ -110,16 +113,24 @@ export function NewDocumentDialog({
     }
   }, [filename, fileType, aiPrompt, selectedModel, folderPath, onCreate, handleClose, addEntry])
 
+  const handleAiPromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setAiPrompt(e.target.value)
+    const el = aiPromptRef.current
+    if (el && !aiPromptExpanded && el.scrollHeight > el.clientHeight) {
+      setAiPromptExpanded(true)
+    }
+  }, [aiPromptExpanded])
+
   const canSubmit = filename.trim().length > 0
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className={`sm:max-w-lg flex flex-col ${aiPromptExpanded ? "h-[70vh]" : ""}`}>
         <DialogHeader>
           <DialogTitle>New Document</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 min-h-0 space-y-4 overflow-y-auto -m-1.5 p-1.5 flex flex-col">
           <div className="space-y-1">
             <label htmlFor="new-doc-filename" className="text-sm font-medium">
               Filename
@@ -164,17 +175,18 @@ export function NewDocumentDialog({
           </div>
 
           {aiAvailable && (
-          <div className="space-y-1">
+          <div className={`space-y-1 ${aiPromptExpanded ? "flex-1 min-h-0 flex flex-col" : ""}`}>
             <label htmlFor="new-doc-ai-prompt" className="text-sm font-medium">
               AI prompt <span className="text-muted-foreground font-normal">(optional)</span>
             </label>
             <textarea
+              ref={aiPromptRef}
               id="new-doc-ai-prompt"
               value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
+              onChange={handleAiPromptChange}
               placeholder="Describe what to generate…"
               rows={3}
-              className="border-input bg-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full resize-none rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className={`border-input bg-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full resize-none rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none ${aiPromptExpanded ? "flex-1 min-h-0" : ""}`}
             />
           </div>
           )}

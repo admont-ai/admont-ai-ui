@@ -26,7 +26,7 @@ describe("useRepos", () => {
     ]
     mockAuthFetch.mockResolvedValue(new Response(JSON.stringify(repos), { status: 200 }))
 
-    const { result } = renderHook(() => useRepos())
+    const { result } = renderHook(() => useRepos(true))
 
     expect(result.current.loading).toBe(true)
 
@@ -40,7 +40,7 @@ describe("useRepos", () => {
   it("handles fetch error", async () => {
     mockAuthFetch.mockResolvedValue(new Response("", { status: 500 }))
 
-    const { result } = renderHook(() => useRepos())
+    const { result } = renderHook(() => useRepos(true))
 
     await waitFor(() => expect(result.current.loading).toBe(false))
 
@@ -51,7 +51,7 @@ describe("useRepos", () => {
   it("handles null response body", async () => {
     mockAuthFetch.mockResolvedValue(new Response("null", { status: 200 }))
 
-    const { result } = renderHook(() => useRepos())
+    const { result } = renderHook(() => useRepos(true))
 
     await waitFor(() => expect(result.current.loading).toBe(false))
 
@@ -63,7 +63,7 @@ describe("useRepos", () => {
       new Response(JSON.stringify([]), { status: 200 }),
     )
 
-    const { result } = renderHook(() => useRepos())
+    const { result } = renderHook(() => useRepos(true))
 
     await waitFor(() => expect(result.current.loading).toBe(false))
 
@@ -72,5 +72,24 @@ describe("useRepos", () => {
     result.current.refresh()
 
     await waitFor(() => expect(mockAuthFetch).toHaveBeenCalledTimes(2))
+  })
+
+  it("does not fetch while unauthenticated, then fetches once auth flips true", async () => {
+    mockAuthFetch.mockResolvedValue(
+      new Response(JSON.stringify([{ slug: "repo-1", name: "Repo 1", description: "", owner: "user", role: "admin" }]), { status: 200 }),
+    )
+
+    const { result, rerender } = renderHook(({ isAuthenticated }) => useRepos(isAuthenticated), {
+      initialProps: { isAuthenticated: false },
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(mockAuthFetch).not.toHaveBeenCalled()
+    expect(result.current.repos).toEqual([])
+
+    rerender({ isAuthenticated: true })
+
+    await waitFor(() => expect(mockAuthFetch).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(result.current.repos).toHaveLength(1))
   })
 })

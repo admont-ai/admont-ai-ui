@@ -98,7 +98,8 @@ export function AppLayout() {
   // Rich-text/source toggle controls surfaced by the active markdown editor,
   // rendered in the editor header.
   const [mdViewState, setMdViewState] = useState<MarkdownViewState | null>(null)
-  const { repos, loading: reposLoading, refresh: refreshRepos } = useRepos()
+  const { user, permissions, isAuthenticated } = useAuth()
+  const { repos, loading: reposLoading, refresh: refreshRepos } = useRepos(isAuthenticated)
 
   // Initialise from URL deep link
   const initialPath = useRef(parseLocationPath())
@@ -116,7 +117,6 @@ export function AppLayout() {
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [aiSelectedText, setAiSelectedText] = useState("")
   const [cursorPosition, setCursorPosition] = useState<{ line: number; column: number } | null>(null)
-  const { user, permissions } = useAuth()
   const { aiAvailable } = useAiLog()
 
   // PDF export

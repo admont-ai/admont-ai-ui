@@ -312,4 +312,19 @@ describe("authFetch", () => {
 
     expect(toast.error).toHaveBeenCalledWith("Backend unreachable")
   })
+
+  it("treats 502 with real JSON body as a normal backend error, not proxy-down", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ title: "Bad Gateway", status: 502, detail: "checker service unavailable" }),
+        { status: 502, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    const { toast } = await import("sonner")
+
+    await authFetch("/api/test")
+
+    expect(toast.error).toHaveBeenCalledWith("Bad Gateway", { description: "checker service unavailable" })
+    expect(toast.error).not.toHaveBeenCalledWith("Backend unreachable")
+  })
 })

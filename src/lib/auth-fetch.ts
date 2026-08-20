@@ -51,7 +51,7 @@ function showUnreachableToast() {
   toast.error("Backend unreachable")
 }
 
-/** Check if a 500 response is likely the dev proxy failing to connect */
+/** Check if a 5xx response is likely the dev proxy failing to connect */
 async function isProxyError(response: Response): Promise<boolean> {
   try {
     const text = await response.clone().text()
@@ -95,9 +95,9 @@ export async function authFetch(
     window.dispatchEvent(new CustomEvent("auth:unauthorized"))
   }
 
-  // Detect backend-down via proxy 502/503/504 or 500 with no real JSON body
+  // Detect backend-down via proxy error page (empty/HTML body) across the 5xx range
   if (response.status >= 500 && response.status <= 504) {
-    if (response.status !== 500 || await isProxyError(response)) {
+    if (await isProxyError(response)) {
       showUnreachableToast()
       return response
     }

@@ -235,7 +235,6 @@ export function AiAssistantPanel({
       }
       addMessage(assistantMsg)
       refreshConversations()
-      setInput("")
     } catch {
       // errors handled by authFetch; aborts are silent
     } finally {
@@ -298,7 +297,6 @@ export function AiAssistantPanel({
         created_at: new Date().toISOString(),
       })
       refreshConversations()
-      setInput("")
 
       const changed = ((data.actions ?? []) as { path?: string; status: string }[])
         .filter((a) => a.status === "ok" && a.path)
@@ -314,6 +312,7 @@ export function AiAssistantPanel({
 
   const handleSubmit = useCallback(async (overrideInput?: string) => {
     const text = overrideInput ?? input
+    setInput("")
     if (mode === "edit") {
       await sendAgentRequest(text)
       return
@@ -333,7 +332,6 @@ export function AiAssistantPanel({
   }, [mode, scope, input, liveSelection, filePath, editorRef, diagramRef, sendRagSearch, sendAgentRequest])
 
   const handleSuggestionClick = useCallback((text: string) => {
-    setInput(text)
     const pageContent = editorRef.current?.getMarkdown() ?? ""
     const context = liveSelection
       ? `[Selected text from ${filePath}]\n${liveSelection}`
@@ -515,13 +513,14 @@ export function AiAssistantPanel({
             onChange={(e) => setInput(e.target.value)}
             placeholder={mode === "edit" ? "Describe what to create or change…" : "Ask a question…"}
             rows={2}
+            disabled={loading}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault()
                 if (canSubmit && !loading) handleSubmit()
               }
             }}
-            className="w-full resize-none bg-transparent px-3.5 pt-3 pb-1 text-sm placeholder:text-muted-foreground focus:outline-none"
+            className="w-full resize-none bg-transparent px-3.5 pt-3 pb-1 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           />
           <div className="flex items-center justify-between px-2.5 pb-2">
             <div className="flex items-center gap-0.5 min-w-0">

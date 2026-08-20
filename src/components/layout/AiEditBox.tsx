@@ -185,7 +185,7 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
 
   if (!open) {
     return (
-      <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2">
+      <div className="absolute right-4 bottom-4 z-10">
         <Button
           variant="ai"
           size="icon"
@@ -206,7 +206,7 @@ export function AiEditBox({ editorRef, fileType, getDiagramSource, onDiagramResu
       : "Describe what to write or change…"
 
   return (
-    <div className="absolute bottom-4 left-1/2 z-10 w-full max-w-xl -translate-x-1/2 px-4">
+    <div className="absolute right-4 bottom-4 z-10 w-96 max-w-[calc(100%-2rem)]">
       <div className="rounded-xl border bg-background shadow-lg">
         <div className="flex items-start gap-2 p-2">
           <Sparkles className="mt-2.5 ml-1 size-4 shrink-0 text-muted-foreground" />

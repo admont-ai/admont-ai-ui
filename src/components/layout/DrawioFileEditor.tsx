@@ -44,7 +44,7 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
 
   const rawFileName = filePath.split("/").pop() ?? ""
 
-  const { content, lastModified, isDraft, draftUpdatedAt, refetch, markDraftSaved } = useDocumentContent(repoSlug, filePath)
+  const { content, lastModified, isDraft, draftUpdatedAt, refetch, markDraftSaved, pendingDraftOwnerName, pendingDraftOwnerEmail, pendingDraftUpdatedAt } = useDocumentContent(repoSlug, filePath)
   const { save, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
 
   // Persist a draft and immediately reflect that one exists, so the discard /
@@ -352,6 +352,9 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
         editing
         isDraft={isDraft}
         lastModified={lastModified}
+        pendingDraftOwnerName={pendingDraftOwnerName}
+        pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+        pendingDraftUpdatedAt={pendingDraftUpdatedAt}
         publishing={publishing}
         saveStatus={autosave.status}
         onPublish={handlePublish}
@@ -420,6 +423,9 @@ export function DrawioFileEditor({ repoSlug, filePath, canEdit = true, initialEd
         isDraft={isDraft}
         lastModified={lastModified}
         draftUpdatedAt={draftUpdatedAt}
+        pendingDraftOwnerName={pendingDraftOwnerName}
+        pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+        pendingDraftUpdatedAt={pendingDraftUpdatedAt}
         canEdit={canEdit}
         onEdit={canEdit ? handleEdit : undefined}
         onPublish={canEdit && isDraft ? handlePublishView : undefined}

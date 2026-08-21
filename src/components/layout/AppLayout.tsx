@@ -171,14 +171,33 @@ export function AppLayout() {
     return () => window.removeEventListener("popstate", onPopState)
   }, [])
 
-  const { content, lastModified, isDraft, draftUpdatedAt, permission: filePermission, fileInfo, error: contentError, refetch, markDraftSaved } = useDocumentContent(
+  const {
+    content,
+    lastModified,
+    isDraft,
+    draftUpdatedAt,
+    permission: filePermission,
+    fileInfo,
+    error: contentError,
+    refetch,
+    markDraftSaved,
+    lockedByPendingDraft,
+    pendingDraftOwnerName,
+    pendingDraftOwnerEmail,
+    pendingDraftUpdatedAt,
+  } = useDocumentContent(
     selectedRepoSlug,
     selectedFilePath
   )
 
-  // Derive editing capability from the file-level permission returned by fileinfo
-  const canEdit = hasPermission(filePermission, "contributor")
-  const canDeleteFile = hasPermission(filePermission, "content_manager")
+  // Derive editing capability from the file-level permission returned by
+  // fileinfo, additionally gated on another user's pending draft (the
+  // backend enforces this too — this just keeps the UI from offering an
+  // action that would 403). lockedByPendingDraft is already false for repo
+  // admins and for the draft's own owner (backend never reports someone's
+  // own draft as "pending" to themselves).
+  const canEdit = hasPermission(filePermission, "contributor") && !lockedByPendingDraft
+  const canDeleteFile = hasPermission(filePermission, "content_manager") && !lockedByPendingDraft
 
   // The agentic assistant created/updated files: refresh the tree and the
   // open document if it was touched.
@@ -538,6 +557,9 @@ export function AppLayout() {
                             editing
                             isDraft={isDraft}
                             lastModified={lastModified}
+                            pendingDraftOwnerName={pendingDraftOwnerName}
+                            pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+                            pendingDraftUpdatedAt={pendingDraftUpdatedAt}
                             publishing={publishing}
                             saveStatus={mdAutosave.status}
                             onPublish={handlePublish}
@@ -613,6 +635,9 @@ export function AppLayout() {
                             isDraft={isDraft}
                             lastModified={lastModified}
                             draftUpdatedAt={draftUpdatedAt}
+                            pendingDraftOwnerName={pendingDraftOwnerName}
+                            pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+                            pendingDraftUpdatedAt={pendingDraftUpdatedAt}
                             canEdit={canEdit}
                             fileInfo={fileInfo}
                             onEdit={canEdit ? () => setEditing(true) : undefined}

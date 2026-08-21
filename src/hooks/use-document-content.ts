@@ -18,6 +18,12 @@ export interface FileInfo {
   draft_created_at?: string
   draft_updated_at?: string
   permission?: string
+  // Pending draft from ANOTHER user (never the caller's own — see is_draft
+  // above for that). Content is never included, only who and when.
+  pending_draft_owner_name?: string
+  pending_draft_owner_email?: string
+  pending_draft_updated_at?: string
+  locked_by_pending_draft?: boolean
 }
 
 export function useDocumentContent(
@@ -105,5 +111,28 @@ export function useDocumentContent(
     setDraftUpdatedAt(updatedAt ?? new Date().toISOString())
   }, [])
 
-  return { content, lastModified, isDraft, draftUpdatedAt, permission, fileInfo, loading, error, refetch: fetchDocument, markDraftSaved }
+  // Derived straight from fileInfo (not separate state) since, unlike
+  // isDraft/draftUpdatedAt, nothing ever optimistically updates these ahead
+  // of a refetch.
+  const lockedByPendingDraft = !!fileInfo?.locked_by_pending_draft
+  const pendingDraftOwnerName = fileInfo?.pending_draft_owner_name ?? null
+  const pendingDraftOwnerEmail = fileInfo?.pending_draft_owner_email ?? null
+  const pendingDraftUpdatedAt = fileInfo?.pending_draft_updated_at ?? null
+
+  return {
+    content,
+    lastModified,
+    isDraft,
+    draftUpdatedAt,
+    permission,
+    fileInfo,
+    loading,
+    error,
+    refetch: fetchDocument,
+    markDraftSaved,
+    lockedByPendingDraft,
+    pendingDraftOwnerName,
+    pendingDraftOwnerEmail,
+    pendingDraftUpdatedAt,
+  }
 }

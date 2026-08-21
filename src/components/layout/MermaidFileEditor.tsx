@@ -73,7 +73,7 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
   const renderIdRef = useRef(0)
   const rawFileName = filePath.split("/").pop() ?? ""
 
-  const { content, lastModified, isDraft, draftUpdatedAt, refetch, markDraftSaved } = useDocumentContent(repoSlug, filePath)
+  const { content, lastModified, isDraft, draftUpdatedAt, refetch, markDraftSaved, pendingDraftOwnerName, pendingDraftOwnerEmail, pendingDraftUpdatedAt } = useDocumentContent(repoSlug, filePath)
   const { save, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
 
   // Persist a draft and immediately reflect that one exists, so the discard /
@@ -348,6 +348,9 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
         editing
         isDraft={isDraft}
         lastModified={lastModified}
+        pendingDraftOwnerName={pendingDraftOwnerName}
+        pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+        pendingDraftUpdatedAt={pendingDraftUpdatedAt}
         publishing={publishing}
         saveStatus={autosave.status}
         onPublish={handlePublish}
@@ -448,6 +451,9 @@ export function MermaidFileEditor({ repoSlug, filePath, canEdit = true, initialE
         isDraft={isDraft}
         lastModified={lastModified}
         draftUpdatedAt={draftUpdatedAt}
+        pendingDraftOwnerName={pendingDraftOwnerName}
+        pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+        pendingDraftUpdatedAt={pendingDraftUpdatedAt}
         canEdit={canEdit}
         onEdit={canEdit ? handleEdit : undefined}
         onPublish={canEdit && isDraft ? handlePublishView : undefined}

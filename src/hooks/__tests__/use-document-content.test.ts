@@ -110,4 +110,46 @@ describe("useDocumentContent", () => {
 
     expect(result.current.permission).toBe("none")
   })
+
+  it("surfaces another user's pending draft", async () => {
+    const fileInfo = {
+      last_modified: "2025-01-01T00:00:00Z",
+      permission: "contributor",
+      pending_draft_owner_name: "Bob",
+      pending_draft_owner_email: "bob@example.com",
+      pending_draft_updated_at: "2025-01-02T00:00:00Z",
+      locked_by_pending_draft: true,
+    }
+    mockAuthFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify(fileInfo), { status: 200 }))
+      .mockResolvedValueOnce(new Response("published content", { status: 200 }))
+
+    const { result } = renderHook(() => useDocumentContent("repo", "doc.md"))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.lockedByPendingDraft).toBe(true)
+    expect(result.current.pendingDraftOwnerName).toBe("Bob")
+    expect(result.current.pendingDraftOwnerEmail).toBe("bob@example.com")
+    expect(result.current.pendingDraftUpdatedAt).toBe("2025-01-02T00:00:00Z")
+  })
+
+  it("defaults pending-draft fields to unlocked/null when absent", async () => {
+    const fileInfo = {
+      last_modified: "2025-01-01T00:00:00Z",
+      permission: "contributor",
+    }
+    mockAuthFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify(fileInfo), { status: 200 }))
+      .mockResolvedValueOnce(new Response("content", { status: 200 }))
+
+    const { result } = renderHook(() => useDocumentContent("repo", "doc.md"))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.lockedByPendingDraft).toBe(false)
+    expect(result.current.pendingDraftOwnerName).toBeNull()
+    expect(result.current.pendingDraftOwnerEmail).toBeNull()
+    expect(result.current.pendingDraftUpdatedAt).toBeNull()
+  })
 })

@@ -104,7 +104,7 @@ export function TextFileEditor({ repoSlug, filePath, canEdit, initialEditing, ed
   const codeRef = useRef(code)
   codeRef.current = code
 
-  const { content, lastModified, isDraft, draftUpdatedAt, refetch } = useDocumentContent(repoSlug, filePath)
+  const { content, lastModified, isDraft, draftUpdatedAt, refetch, pendingDraftOwnerName, pendingDraftOwnerEmail, pendingDraftUpdatedAt } = useDocumentContent(repoSlug, filePath)
   const { save, saving, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
 
   const language = getLanguage(filePath)
@@ -201,6 +201,9 @@ export function TextFileEditor({ repoSlug, filePath, canEdit, initialEditing, ed
         editing
         isDraft={isDraft}
         lastModified={lastModified}
+        pendingDraftOwnerName={pendingDraftOwnerName}
+        pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+        pendingDraftUpdatedAt={pendingDraftUpdatedAt}
         saving={saving}
         publishing={publishing}
         onSave={handleSave}
@@ -258,6 +261,9 @@ export function TextFileEditor({ repoSlug, filePath, canEdit, initialEditing, ed
         isDraft={isDraft}
         lastModified={lastModified}
         draftUpdatedAt={draftUpdatedAt}
+        pendingDraftOwnerName={pendingDraftOwnerName}
+        pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+        pendingDraftUpdatedAt={pendingDraftUpdatedAt}
         canEdit={canEdit}
         onEdit={canEdit ? handleEdit : undefined}
         onPublish={canEdit ? handlePublish : undefined}

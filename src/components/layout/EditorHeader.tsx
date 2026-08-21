@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Check, Copy, EllipsisVertical, FileDown, FilePenLine, History, Info, Pencil, Save, Send, Trash2, TriangleAlert, Undo2, X } from "lucide-react"
+import { Check, Copy, EllipsisVertical, FileDown, FilePenLine, History, Info, Lock, Pencil, Save, Send, Trash2, TriangleAlert, Undo2, X } from "lucide-react"
 import type { AutosaveStatus } from "@/hooks/use-debounced-autosave"
 import {
   AlertDialog,
@@ -30,6 +30,11 @@ interface EditorHeaderProps {
   isDraft?: boolean
   lastModified?: string | null
   draftUpdatedAt?: string | null
+  // Another user's pending draft (never the viewer's own — see isDraft
+  // above for that). Content is never included, only who and when.
+  pendingDraftOwnerName?: string | null
+  pendingDraftOwnerEmail?: string | null
+  pendingDraftUpdatedAt?: string | null
   saving?: boolean
   publishing?: boolean
   canEdit?: boolean
@@ -58,6 +63,9 @@ export function EditorHeader({
   isDraft = false,
   lastModified = null,
   draftUpdatedAt = null,
+  pendingDraftOwnerName = null,
+  pendingDraftOwnerEmail = null,
+  pendingDraftUpdatedAt = null,
   saving = false,
   publishing = false,
   canEdit = false,
@@ -99,6 +107,15 @@ export function EditorHeader({
         {isDraft && (
           <span className="inline-flex shrink-0 items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
             Draft
+          </span>
+        )}
+        {pendingDraftOwnerEmail && (
+          <span
+            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-300"
+            title={`Pending draft by ${pendingDraftOwnerName || pendingDraftOwnerEmail}${pendingDraftUpdatedAt ? `, updated ${new Date(pendingDraftUpdatedAt).toLocaleString()}` : ""}`}
+          >
+            <Lock className="size-3" />
+            Draft pending by {pendingDraftOwnerName || pendingDraftOwnerEmail}
           </span>
         )}
         {children}

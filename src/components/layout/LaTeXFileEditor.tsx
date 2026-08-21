@@ -174,7 +174,7 @@ export function LaTeXFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  const { content, lastModified, isDraft, draftUpdatedAt, refetch } = useDocumentContent(repoSlug, filePath)
+  const { content, lastModified, isDraft, draftUpdatedAt, refetch, pendingDraftOwnerName, pendingDraftOwnerEmail, pendingDraftUpdatedAt } = useDocumentContent(repoSlug, filePath)
   const { save, saving, publish, publishing, deleteDraft } = useDocumentSave(repoSlug, filePath)
   const { models, modelsLoading, selectedModel, setSelectedModel } = useAiLog()
 
@@ -307,6 +307,9 @@ export function LaTeXFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
         editing
         isDraft={isDraft}
         lastModified={lastModified}
+        pendingDraftOwnerName={pendingDraftOwnerName}
+        pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+        pendingDraftUpdatedAt={pendingDraftUpdatedAt}
         saving={saving}
         publishing={publishing}
         onSave={handleSave}
@@ -385,6 +388,9 @@ export function LaTeXFileEditor({ repoSlug, filePath, canEdit, initialEditing, e
         isDraft={isDraft}
         lastModified={lastModified}
         draftUpdatedAt={draftUpdatedAt}
+        pendingDraftOwnerName={pendingDraftOwnerName}
+        pendingDraftOwnerEmail={pendingDraftOwnerEmail}
+        pendingDraftUpdatedAt={pendingDraftUpdatedAt}
         canEdit={canEdit}
         onEdit={canEdit ? handleEdit : undefined}
         onPublish={canEdit ? handlePublish : undefined}

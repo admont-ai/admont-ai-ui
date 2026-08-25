@@ -42,6 +42,47 @@ export function clearAuthToken(): void {
   localStorage.removeItem(REFRESH_KEY)
 }
 
+// Refreshes the access token using the stored refresh token. Returns the new
+// access token on success, or null (after clearing both tokens) on failure.
+// Concurrent callers share one in-flight request so a burst of 401s across
+// several in-flight requests doesn't fire multiple refresh calls at once.
+let refreshInFlight: Promise<string | null> | null = null
+
+export function refreshAccessToken(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = doRefresh().finally(() => {
+      refreshInFlight = null
+    })
+  }
+  return refreshInFlight
+}
+
+async function doRefresh(): Promise<string | null> {
+  const rt = getRefreshToken()
+  if (!rt) return null
+  try {
+    const res = await fetch(apiUrl("/auth/refresh"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: rt }),
+    })
+    if (!res.ok) {
+      clearAuthToken()
+      return null
+    }
+    const data = (await res.json()) as { token?: string }
+    if (!data.token) {
+      clearAuthToken()
+      return null
+    }
+    setAuthToken(data.token)
+    return data.token
+  } catch {
+    clearAuthToken()
+    return null
+  }
+}
+
 // Deduplicate "backend unreachable" toasts — show at most one per 5 seconds
 let lastUnreachableToast = 0
 function showUnreachableToast() {
@@ -91,8 +132,24 @@ export async function authFetch(
   }
 
   if (response.status === 401 && token) {
-    clearAuthToken()
-    window.dispatchEvent(new CustomEvent("auth:unauthorized"))
+    // The access token may have simply expired (e.g. the proactive refresh
+    // timer was delayed by browser tab throttling) — try a silent refresh
+    // and retry once before giving up on the session.
+    const newToken = await refreshAccessToken()
+    if (newToken) {
+      const retryHeaders = new Headers(init?.headers)
+      retryHeaders.set("Authorization", `Bearer ${newToken}`)
+      try {
+        response = await fetch(target, { ...init, headers: retryHeaders })
+      } catch {
+        // Keep the original 401 response; the outer error handling below
+        // will report it.
+      }
+    }
+    if (response.status === 401) {
+      clearAuthToken()
+      window.dispatchEvent(new CustomEvent("auth:unauthorized"))
+    }
   }
 
   // Detect backend-down via proxy error page (empty/HTML body) across the 5xx range

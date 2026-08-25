@@ -12,7 +12,7 @@ import { toast } from "sonner"
 import { startAuthentication } from "@simplewebauthn/browser"
 import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser"
 
-import { apiUrl, authFetch, clearAuthToken, getAuthToken, getRefreshToken, setAuthToken, setRefreshToken } from "@/lib/auth-fetch"
+import { apiUrl, authFetch, clearAuthToken, getAuthToken, getRefreshToken, refreshAccessToken, setAuthToken, setRefreshToken } from "@/lib/auth-fetch"
 import { providerFromIssuer } from "@/components/ui/provider-icon"
 
 interface User {
@@ -215,29 +215,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const tryRefresh = useCallback(async () => {
-    const rt = getRefreshToken()
-    if (!rt) {
-      logout()
-      return
-    }
-    try {
-      const res = await fetch(apiUrl("/auth/refresh"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: rt }),
-      })
-      if (!res.ok) {
-        logout()
-        return
-      }
-      const data = (await res.json()) as { token?: string }
-      if (data.token) {
-        setAuthToken(data.token)
-        scheduleExpiry(data.token)
-      } else {
-        logout()
-      }
-    } catch {
+    const newToken = await refreshAccessToken()
+    if (newToken) {
+      scheduleExpiry(newToken)
+    } else {
       logout()
     }
   }, [logout, scheduleExpiry])
@@ -431,17 +412,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // No callback — restore existing session from localStorage
+    // No callback — restore existing session from localStorage. A stored
+    // access token that's missing/expired doesn't necessarily mean the
+    // session is gone: the refresh token is valid for up to 7 days, so a
+    // page reload/reopen well past the 1-hour access-token lifetime (the
+    // common case — the proactive timer in scheduleExpiry only runs while
+    // a tab stays open) should silently refresh instead of forcing a full
+    // re-login.
     const token = getAuthToken()
-    if (token) {
-      const expMs = getExpMs(token)
-      if (expMs && expMs - 60_000 > Date.now()) {
-        restoreSession(token, setUser, setPermissions, scheduleExpiry)
-      } else {
-        clearAuthToken()
-      }
+    const expMs = token ? getExpMs(token) : null
+    if (token && expMs && expMs - 60_000 > Date.now()) {
+      restoreSession(token, setUser, setPermissions, scheduleExpiry)
+      setIsLoading(false)
+    } else if (getRefreshToken()) {
+      refreshAccessToken().then((newToken) => {
+        if (newToken) {
+          restoreSession(newToken, setUser, setPermissions, scheduleExpiry)
+        }
+        setIsLoading(false)
+      })
+    } else {
+      if (token) clearAuthToken()
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [scheduleExpiry, applySession])
 
   // Listen for 401 events from authFetch

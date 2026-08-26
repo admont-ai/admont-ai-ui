@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { getAuthToken, setAuthToken, clearAuthToken, authFetch } from "@/lib/auth-fetch"
+import { getAuthToken, setAuthToken, clearAuthToken, authFetch, setRefreshToken, getRefreshToken } from "@/lib/auth-fetch"
 
 vi.mock("sonner", () => ({
   toast: {
@@ -95,6 +95,52 @@ describe("authFetch", () => {
     await authFetch("/api/test")
 
     expect(getAuthToken()).toBeNull()
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "auth:unauthorized" }),
+    )
+  })
+
+  it("silently refreshes and retries once on 401 when a refresh token exists", async () => {
+    setAuthToken("expired-token")
+    setRefreshToken("valid-refresh-token")
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString()
+      if (url.includes("/auth/refresh")) {
+        return new Response(JSON.stringify({ token: "new-access-token" }), { status: 200 })
+      }
+      // Original request: 401 with the stale token, 200 once it's been refreshed.
+      return getAuthToken() === "new-access-token"
+        ? new Response(JSON.stringify({ ok: true }), { status: 200 })
+        : new Response("", { status: 401 })
+    })
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent")
+
+    const res = await authFetch("/api/test")
+
+    expect(res.status).toBe(200)
+    expect(getAuthToken()).toBe("new-access-token")
+    expect(getRefreshToken()).toBe("valid-refresh-token")
+    expect(dispatchSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "auth:unauthorized" }),
+    )
+  })
+
+  it("clears token and dispatches event on 401 when refresh also fails", async () => {
+    setAuthToken("expired-token")
+    setRefreshToken("stale-refresh-token")
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString()
+      if (url.includes("/auth/refresh")) {
+        return new Response("", { status: 401 })
+      }
+      return new Response("", { status: 401 })
+    })
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent")
+
+    await authFetch("/api/test")
+
+    expect(getAuthToken()).toBeNull()
+    expect(getRefreshToken()).toBeNull()
     expect(dispatchSpy).toHaveBeenCalledWith(
       expect.objectContaining({ type: "auth:unauthorized" }),
     )

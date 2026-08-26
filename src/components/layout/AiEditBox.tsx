@@ -17,7 +17,7 @@ interface AiEditBoxProps {
   /** Markdown mode: edits the document via the markdown editor handle. */
   editorRef?: RefObject<MarkdownEditorHandle | null>
   /** Diagram mode: edits the diagram source as a whole. */
-  fileType?: "mermaid" | "drawio"
+  fileType?: "mermaid" | "drawio" | "excalidraw"
   getDiagramSource?: () => string
   onDiagramResult?: (source: string) => void
 }

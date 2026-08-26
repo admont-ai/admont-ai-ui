@@ -7,18 +7,24 @@ vi.mock("@/lib/auth-fetch", () => ({
   getAuthToken: vi.fn(),
   setAuthToken: vi.fn(),
   clearAuthToken: vi.fn(),
+  getRefreshToken: vi.fn(),
+  setRefreshToken: vi.fn(),
+  refreshAccessToken: vi.fn(),
+  apiUrl: (path: string) => path,
 }))
 
 vi.mock("@/components/ui/provider-icon", () => ({
   providerFromIssuer: vi.fn().mockReturnValue("google"),
 }))
 
-import { authFetch, getAuthToken, setAuthToken, clearAuthToken } from "@/lib/auth-fetch"
+import { authFetch, getAuthToken, setAuthToken, clearAuthToken, getRefreshToken, refreshAccessToken } from "@/lib/auth-fetch"
 
 const mockAuthFetch = vi.mocked(authFetch)
 const mockGetAuthToken = vi.mocked(getAuthToken)
 const mockSetAuthToken = vi.mocked(setAuthToken)
 const mockClearAuthToken = vi.mocked(clearAuthToken)
+const mockGetRefreshToken = vi.mocked(getRefreshToken)
+const mockRefreshAccessToken = vi.mocked(refreshAccessToken)
 
 function makeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }))
@@ -44,6 +50,8 @@ describe("AuthProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
+    mockGetRefreshToken.mockReturnValue(null)
+    mockRefreshAccessToken.mockResolvedValue(null)
     Object.defineProperty(window, "location", {
       value: { pathname: "/", search: "", origin: "http://localhost:3000", href: "http://localhost:3000/", reload: vi.fn() },
       writable: true,
@@ -125,6 +133,56 @@ describe("AuthProvider", () => {
     })
 
     expect(mockClearAuthToken).toHaveBeenCalled()
+    expect(screen.getByTestId("authenticated").textContent).toBe("false")
+  })
+
+  it("silently refreshes an expired token on restore when a refresh token exists", async () => {
+    const pastExp = Math.floor(Date.now() / 1000) - 3600
+    const expiredToken = makeJwt({ email: "x@test.com", name: "X", picture: "", exp: pastExp })
+    const futureExp = Math.floor(Date.now() / 1000) + 3600
+    const freshToken = makeJwt({
+      email: "x@test.com", name: "X", picture: "", exp: futureExp, iss: "https://accounts.google.com",
+    })
+    mockGetAuthToken.mockReturnValue(expiredToken)
+    mockGetRefreshToken.mockReturnValue("some-refresh-token")
+    mockRefreshAccessToken.mockResolvedValue(freshToken)
+    mockAuthFetch.mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }))
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading").textContent).toBe("false")
+    })
+
+    expect(mockRefreshAccessToken).toHaveBeenCalled()
+    expect(mockClearAuthToken).not.toHaveBeenCalled()
+    expect(screen.getByTestId("email").textContent).toBe("x@test.com")
+    expect(screen.getByTestId("authenticated").textContent).toBe("true")
+  })
+
+  it("gives up when refreshing an expired token fails", async () => {
+    const pastExp = Math.floor(Date.now() / 1000) - 3600
+    const expiredToken = makeJwt({ email: "x@test.com", name: "X", picture: "", exp: pastExp })
+    mockGetAuthToken.mockReturnValue(expiredToken)
+    mockGetRefreshToken.mockReturnValue("some-refresh-token")
+    mockRefreshAccessToken.mockResolvedValue(null)
+    mockAuthFetch.mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }))
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading").textContent).toBe("false")
+    })
+
+    expect(mockRefreshAccessToken).toHaveBeenCalled()
     expect(screen.getByTestId("authenticated").textContent).toBe("false")
   })
 

@@ -112,6 +112,7 @@ import { mathPlugin } from "@/plugins/mathPlugin"
 import { videoPlugin } from "@/plugins/videoPlugin"
 import { MermaidEditorDialog, type MermaidEditRequest } from "./MermaidEditorDialog"
 import { DrawioEditorDialog, type DrawioEditRequest } from "./DrawioEditorDialog"
+import { ExcalidrawEditorDialog, type ExcalidrawEditRequest } from "./ExcalidrawEditorDialog"
 import { InsertLinkDialog } from "./InsertLinkDialog"
 import type { Repo } from "@/types"
 
@@ -456,6 +457,7 @@ export const MarkdownEditor = forwardRef<
 
   const [mermaidEditRequest, setMermaidEditRequest] = useState<MermaidEditRequest | null>(null)
   const [drawioEditRequest, setDrawioEditRequest] = useState<DrawioEditRequest | null>(null)
+  const [excalidrawEditRequest, setExcalidrawEditRequest] = useState<ExcalidrawEditRequest | null>(null)
   const [imageDragOver, setImageDragOver] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [editingLink, setEditingLink] = useState<{
@@ -615,10 +617,18 @@ export const MarkdownEditor = forwardRef<
     setDrawioEditRequest(null)
   }, [])
 
+  const handleExcalidrawEdit = useCallback((request: ExcalidrawEditRequest) => {
+    setExcalidrawEditRequest(request)
+  }, [])
+
+  const handleExcalidrawEditHandled = useCallback(() => {
+    setExcalidrawEditRequest(null)
+  }, [])
+
   // Stable component that closes over diagram edit handlers
   const ImageDialogWithDiagramEditors = useCallback(
-    () => <ImageUploadDialog repoSlug={repoSlug} filePath={filePath} onMermaidEdit={handleMermaidEdit} onDrawioEdit={handleDrawioEdit} />,
-    [repoSlug, filePath, handleMermaidEdit, handleDrawioEdit],
+    () => <ImageUploadDialog repoSlug={repoSlug} filePath={filePath} onMermaidEdit={handleMermaidEdit} onDrawioEdit={handleDrawioEdit} onExcalidrawEdit={handleExcalidrawEdit} />,
+    [repoSlug, filePath, handleMermaidEdit, handleDrawioEdit, handleExcalidrawEdit],
   )
 
   const handleEditorDragOver = useCallback((e: React.DragEvent) => {
@@ -962,6 +972,13 @@ export const MarkdownEditor = forwardRef<
                                 filePath={filePath}
                                 editRequest={drawioEditRequest}
                                 onEditHandled={handleDrawioEditHandled}
+                                onDiagramSaved={onDiagramSaved}
+                              />
+                              <ExcalidrawEditorDialog
+                                repoSlug={repoSlug}
+                                filePath={filePath}
+                                editRequest={excalidrawEditRequest}
+                                onEditHandled={handleExcalidrawEditHandled}
                                 onDiagramSaved={onDiagramSaved}
                               />
                               <ToolbarSeparator />

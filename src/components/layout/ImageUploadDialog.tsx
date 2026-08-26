@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import type { MermaidEditRequest } from "./MermaidEditorDialog"
 import type { DrawioEditRequest } from "./DrawioEditorDialog"
+import type { ExcalidrawEditRequest } from "./ExcalidrawEditorDialog"
 
 const IMAGE_EXTENSIONS = new Set([
   ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp", ".ico",
@@ -82,6 +83,7 @@ interface ImageUploadDialogProps {
   filePath: string
   onMermaidEdit?: (request: MermaidEditRequest) => void
   onDrawioEdit?: (request: DrawioEditRequest) => void
+  onExcalidrawEdit?: (request: ExcalidrawEditRequest) => void
 }
 
 type Tab = "upload" | "server"
@@ -91,6 +93,7 @@ export function ImageUploadDialog({
   filePath,
   onMermaidEdit,
   onDrawioEdit,
+  onExcalidrawEdit,
 }: ImageUploadDialogProps) {
   const [state, imageUploadHandler] = useCellValues(
     imageDialogState$,
@@ -120,14 +123,17 @@ export function ImageUploadDialog({
     if (!src) return
     const pathname = src.split("?")[0].toLowerCase()
 
-    if (pathname.endsWith(".drawio.svg") && onDrawioEdit) {
+    if (pathname.endsWith(".excalidraw.svg") && onExcalidrawEdit) {
+      closeDialog()
+      onExcalidrawEdit({ nodeKey: state.nodeKey, src })
+    } else if (pathname.endsWith(".drawio.svg") && onDrawioEdit) {
       closeDialog()
       onDrawioEdit({ nodeKey: state.nodeKey, src })
     } else if (pathname.endsWith(".svg") && onMermaidEdit) {
       closeDialog()
       onMermaidEdit({ nodeKey: state.nodeKey, src })
     }
-  }, [state, onMermaidEdit, onDrawioEdit, closeDialog])
+  }, [state, onMermaidEdit, onDrawioEdit, onExcalidrawEdit, closeDialog])
 
   const selectFile = useCallback((file: File | null) => {
     setSelectedFile(file)

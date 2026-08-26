@@ -46,10 +46,11 @@ interface AiAssistantPanelProps {
 }
 
 /** Diagram file type of the current file, or null for text/markdown files. */
-function diagramTypeOf(filePath: string): "mermaid" | "drawio" | null {
+function diagramTypeOf(filePath: string): "mermaid" | "drawio" | "excalidraw" | null {
   const lower = filePath.toLowerCase()
   if (lower.endsWith(".mmd")) return "mermaid"
   if (lower.endsWith(".drawio")) return "drawio"
+  if (lower.endsWith(".excalidraw")) return "excalidraw"
   return null
 }
 

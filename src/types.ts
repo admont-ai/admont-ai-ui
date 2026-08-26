@@ -22,8 +22,8 @@ export interface AiModel {
   provider?: string
 }
 
-/** Imperative handle exposed by diagram file editors (mermaid, drawio) so the
- * AI assistant can read and replace the diagram source. */
+/** Imperative handle exposed by diagram file editors (mermaid, drawio,
+ * excalidraw) so the AI assistant can read and replace the diagram source. */
 export interface DiagramSourceHandle {
   getSource: () => string
   setSource: (source: string) => void

@@ -25,6 +25,7 @@ const FILE_TYPES = [
   { label: "LaTeX", extension: ".tex", type: "latex" },
   { label: "Draw.io", extension: ".drawio", type: "drawio" },
   { label: "Mermaid", extension: ".mmd", type: "mermaid" },
+  { label: "Excalidraw", extension: ".excalidraw", type: "excalidraw" },
   { label: "Text", extension: "", type: "text" },
 ] as const
 

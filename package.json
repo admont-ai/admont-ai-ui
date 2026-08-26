@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.4",
+    "@excalidraw/excalidraw": "^0.18.1",
     "@mdxeditor/editor": "^3.52.4",
     "@monaco-editor/react": "^4.7.0",
     "@simplewebauthn/browser": "^13.3.0",

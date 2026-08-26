@@ -40,6 +40,7 @@ import { Header } from "./Header"
 import { MarkdownEditor, ViewModeToggle, type MarkdownEditorHandle, type MarkdownViewState } from "./MarkdownEditor"
 import { EditorHeader } from "./EditorHeader"
 import { MermaidFileEditor } from "./MermaidFileEditor"
+import { ExcalidrawFileEditor } from "./ExcalidrawFileEditor"
 import { TextFileEditor } from "./TextFileEditor"
 import { VideoFilePlayer } from "./VideoFilePlayer"
 import { Sidebar } from "./Sidebar"
@@ -66,6 +67,10 @@ function isSpreadsheetFile(path: string): boolean {
 
 function isMermaidFile(path: string): boolean {
   return path.toLowerCase().endsWith(".mmd")
+}
+
+function isExcalidrawFile(path: string): boolean {
+  return path.toLowerCase().endsWith(".excalidraw")
 }
 
 function isLatexFile(path: string): boolean {
@@ -502,6 +507,18 @@ export function AppLayout() {
                       />
                     ) : selectedFilePath && isMermaidFile(selectedFilePath) ? (
                       <MermaidFileEditor
+                        key={selectedFilePath}
+                        repoSlug={selectedRepoSlug}
+                        filePath={selectedFilePath}
+                        canEdit={canEdit}
+                        initialEditing={editOnLoad}
+                        editSignal={editSignal}
+                        handleRef={diagramRef}
+                        onRename={canEdit ? () => setRenamingFile(true) : undefined}
+                        onDelete={canDeleteFile ? handleDeleteFile : undefined}
+                      />
+                    ) : selectedFilePath && isExcalidrawFile(selectedFilePath) ? (
+                      <ExcalidrawFileEditor
                         key={selectedFilePath}
                         repoSlug={selectedRepoSlug}
                         filePath={selectedFilePath}

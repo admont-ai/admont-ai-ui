@@ -61,8 +61,9 @@ function extractNameFromSrc(src: string): string | null {
       : src.split("?")[0]
     const filename = pathname.split("/").pop() ?? ""
     const lower = filename.toLowerCase()
-    // Reject .drawio.svg — those belong to the draw.io editor
+    // Reject .drawio.svg / .excalidraw.svg — those belong to other editors
     if (lower.endsWith(".drawio.svg")) return null
+    if (lower.endsWith(".excalidraw.svg")) return null
     if (!lower.endsWith(".svg")) return null
     return filename.slice(0, -4)
   } catch {

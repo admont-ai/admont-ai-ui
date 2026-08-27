@@ -1,6 +1,6 @@
 {
   "name": "@admont-ai/ui",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Frontend for Admont-AI — a collaborative document platform with Git-backed storage, hybrid search, and AI-powered content tools",
   "type": "module",
   "license": "MIT",

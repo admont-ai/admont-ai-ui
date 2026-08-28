@@ -103,8 +103,8 @@ export function AppLayout() {
   // Rich-text/source toggle controls surfaced by the active markdown editor,
   // rendered in the editor header.
   const [mdViewState, setMdViewState] = useState<MarkdownViewState | null>(null)
-  const { user, permissions, isAuthenticated } = useAuth()
-  const { repos, loading: reposLoading, refresh: refreshRepos } = useRepos(isAuthenticated)
+  const { user, permissions } = useAuth()
+  const { repos, loading: reposLoading, refresh: refreshRepos } = useRepos()
 
   // Initialise from URL deep link
   const initialPath = useRef(parseLocationPath())
@@ -463,7 +463,7 @@ export function AppLayout() {
               <ResizablePanelGroup orientation="horizontal">
                 <ResizablePanel id="doc" defaultSize="100%" minSize="40%">
                   <main className="h-full overflow-y-auto pt-3">
-                    {!user ? (
+                    {!user && !reposLoading && repos.length === 0 ? (
                       <LoginPanel />
                     ) : !reposLoading && repos.length === 0 ? (
                       <div className="flex h-full justify-center px-6 pt-[30vh]">

@@ -1,6 +1,6 @@
 import type { RefObject } from "react"
 import type { PanelImperativeHandle } from "react-resizable-panels"
-import { Check, ClipboardCopy, Cpu, KeyRound, Loader2, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Plus, Settings, Shield, ShieldCheck, ShieldOff, Sparkles, Trash2 } from "lucide-react"
+import { Check, ClipboardCopy, Cpu, KeyRound, Loader2, LogIn, LogOut, MonitorSmartphone, PanelLeftClose, PanelLeftOpen, Plus, Settings, Shield, ShieldCheck, ShieldOff, Sparkles, Trash2 } from "lucide-react"
 import { startRegistration } from "@simplewebauthn/browser"
 import { useCallback, useEffect, useState } from "react"
 
@@ -26,6 +26,7 @@ import { useAiLog } from "@/hooks/use-ai-log"
 import { useAuth } from "@/contexts/auth-context"
 import { authFetch } from "@/lib/auth-fetch"
 import type { Repo } from "@/types"
+import { LoginDialog } from "@/components/auth/LoginDialog"
 import { RepoSelector } from "./RepoSelector"
 import { SearchBar } from "./SearchBar"
 
@@ -52,6 +53,7 @@ export function Header({
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [totpDialogOpen, setTotpDialogOpen] = useState(false)
   const [passkeysDialogOpen, setPasskeysDialogOpen] = useState(false)
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false)
   const { user, permissions, logout } = useAuth()
   const { models, selectedModel, setSelectedModel } = useAiLog()
 
@@ -215,7 +217,11 @@ export function Header({
               <LogOut className="size-4" />
             </Button>
           </>
-        ) : null}
+        ) : (
+          <Button variant="ghost" size="icon" onClick={() => setLoginDialogOpen(true)} aria-label="Log in">
+            <LogIn className="size-4" />
+          </Button>
+        )}
       </div>
     </header>
     {passwordDialogOpen && (
@@ -226,6 +232,9 @@ export function Header({
     )}
     {passkeysDialogOpen && (
       <PasskeysDialog open={passkeysDialogOpen} onOpenChange={setPasskeysDialogOpen} />
+    )}
+    {loginDialogOpen && (
+      <LoginDialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen} />
     )}
   </>
   )

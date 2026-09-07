@@ -28,7 +28,7 @@ export function LoginDialog({
 }) {
   const { providers, signupOpen, login, loginInternal, loginPasskey, verifyTotp, resetPassword, signup } = useAuth()
   const [mode, setMode] = useState<Mode>(signupOpen ? "signup" : "login")
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
@@ -87,7 +87,7 @@ export function LoginDialog({
     setBusy(true)
     try {
       if (mode === "signup") {
-        await signup(email, password, firstName, lastName)
+        await signup(username, password, firstName, lastName)
         close()
       } else if (mode === "reset") {
         if (password !== confirmPassword) {
@@ -97,7 +97,7 @@ export function LoginDialog({
         await resetPassword(resetToken, password)
         close()
       } else {
-        const res = await loginInternal(email, password)
+        const res = await loginInternal(username, password)
         if (res.totpRequired) {
           setPendingToken(res.pendingToken ?? "")
           setCode("")
@@ -202,13 +202,12 @@ export function LoginDialog({
                 </div>
               )}
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
                 className={inputClass}
                 autoFocus={mode === "login"}
-                required
               />
               <input
                 type="password"
